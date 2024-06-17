@@ -5,7 +5,12 @@ A full stack, email application using Java in the backend with Spring Boot and J
 * Spring Boot: 3.3.0
 * Java: 22
 
-# Dependencies
+# Spring Boot Dependencies
 * Lombok
 * Spring Web
 * PostgreSQL Driver
+
+# React Dependencies
+``` npm install react ```
+
+``` npm install react-router-dom ```
