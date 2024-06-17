@@ -1,9 +1,9 @@
 package com.example.emailapp.Controllers;
 
 import com.example.emailapp.Database;
-
-//import records for database tables
 import com.example.emailapp.Records.Email;
+//import records for database tables
+import com.example.emailapp.Records.User;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,39 +14,35 @@ import org.springframework.web.bind.annotation.RequestParam;
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
 
-import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.sql.*;
 
 @RestController
-public class EmailController {
+public class UserController {
+    @GetMapping("/users")
 
-    /*
-     * get all emails a specific user received
-     * using the url pattern /emails?receiver=[username]
-     */
-    @GetMapping("/emails")
-    public ArrayList<Email> EmailsReceived(@RequestParam(value = "receiver") String receiver) {
+    //@RequestParam(value = "email") String email
+
+    public ArrayList<User> GetUsers() {
         Connection conn = Database.connect();
-        String query = "select * from \"Emails\" where receiver = ?";
-        ArrayList<Email> emails = new ArrayList<Email>();
+        String query = "select * from \"Users\"";
+        ArrayList<User> users = new ArrayList<User>();
 
         //try-with-resources automatically closes the ps variable
         try (PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, receiver);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 /*
-                 * create an email object for each row returned from 
+                 * create a user object for each row returned from 
                  * the database query and add it to the array list
                  */
-                Email email = new Email(rs.getString("id"), rs.getString("content"), rs.getString("sender"), rs.getString("receiver"), rs.getLong("sent"), rs.getBoolean("starred"));
-                emails.add(email);
+                User user = new User(rs.getString("id"), rs.getString("email"), rs.getString("password"));
+                users.add(user);
             }
         } catch (SQLException e) {
             System.out.println("Query error: " + e);
         }
 
-        return emails;
+        return users;
     }
 }
