@@ -4,6 +4,7 @@ import com.example.emailapp.Database;
 
 //import records for database tables
 import com.example.emailapp.Records.Email;
+import com.example.emailapp.Records.EmailPostData;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
