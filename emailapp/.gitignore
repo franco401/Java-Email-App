@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 src/main/resources/application.properties
+src/main/java/com/example/emailapp/Database.java
 
 ### STS ###
 .apt_generated
