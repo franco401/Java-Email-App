@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
+//used to execute db queries
+import java.sql.PreparedStatement;
 import java.sql.*;
+import java.util.ArrayList;
 
 @RestController
 public class UserController {
     @GetMapping("/users")
-
-    //@RequestParam(value = "email") String email
 
     public ArrayList<User> GetUsers() {
         Connection conn = Database.connect();

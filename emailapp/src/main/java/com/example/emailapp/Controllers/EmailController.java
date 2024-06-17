@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
 
-import java.sql.PreparedStatement;
-import java.util.ArrayList;
+//used to execute db queries
 import java.sql.*;
+
+import java.util.ArrayList;
+import java.util.Base64;
 
 @RestController
 public class EmailController {
@@ -48,5 +50,31 @@ public class EmailController {
         }
 
         return emails;
+    }
+
+    @PostMapping("/sendemail")
+    public void SendEmail(EmailPostData epd) {
+        Connection conn = Database.connect();
+        String query = "insert into \"Emails\" values (?, ?, ?, ?, ?, ?)";
+        
+        //create Base64 id using current time and other data
+        long currentTime = System.currentTimeMillis();
+        String data = currentTime + epd.sender();
+        String id = Base64.getEncoder().encodeToString(data.getBytes());
+
+        //try-with-resources automatically closes the ps variable
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, id);
+            ps.setString(2, epd.content());
+            ps.setString(3, epd.sender());
+            ps.setString(4, epd.receiver());
+            ps.setLong(5, currentTime);
+            ps.setBoolean(6, false);
+
+            //insert email to database
+            ps.executeQuery();
+        } catch (SQLException e) {
+            System.out.println("Query error: " + e);
+        }
     }
 }
