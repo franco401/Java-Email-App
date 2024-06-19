@@ -1,4 +1,4 @@
-package com.example.emailapp.Controllers;
+package com.example.emailapp.Records;
 
 /*
  * maps a post request containing "content",
