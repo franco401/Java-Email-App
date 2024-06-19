@@ -25,18 +25,22 @@ export default function LoginPage() {
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} empty inputs`)
         } else {
-            try {
-                let response = await fetch("http://localhost:8080/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(inputFields)
-                });
-                console.log(response);
-            } catch {
-                alert("Something went wrong.")
-            }
+            let response = await fetch("http://localhost:8080/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(inputFields)
+            })
+            response.json().then((data) => {
+                console.log(data);
+                if (data['email'] === '') {
+                    alert("The username and/or password entered were invalid.");
+                } else {
+                    localStorage.setItem("emailAddress", JSON.stringify(data));
+                    window.location.href = "/emails";
+                }
+            });
         }
     }
 
