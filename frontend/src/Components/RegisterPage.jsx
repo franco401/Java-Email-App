@@ -38,7 +38,7 @@ export default function RegisterPage() {
                 if (data['email'] === '') {
                     alert("The username and/or password are already taken.");
                 } else {
-                    window.location.href = "/login";
+                    //window.location.href = "/login";
                 }
             });
         }
@@ -58,6 +58,7 @@ export default function RegisterPage() {
                 </div>
                 <button type="submit" className="btn btn-primary">Register</button>
             </form>
+            <span>Already have an account? Login <a href="/login">here</a></span>
         </>
     )
 }

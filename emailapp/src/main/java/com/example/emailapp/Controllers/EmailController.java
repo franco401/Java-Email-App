@@ -4,7 +4,7 @@ import com.example.emailapp.Database;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-
+import org.springframework.web.bind.annotation.RequestBody;
 //used to read url parameters such as /greeting?name="Adam"
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import com.example.emailapp.Security;
 import com.example.emailapp.Models.Email;
 import com.example.emailapp.Models.EmailForm;
+import com.example.emailapp.Models.User;
 
 @CrossOrigin(origins = "http://127.0.0.1:5173/")
 
@@ -31,54 +32,108 @@ public class EmailController {
 
     /*
      * get all emails a specific user received
-     * using the url pattern /emails?receiver=[username]
+     * using the url pattern /emails?recipient=[username]
      */
     @GetMapping("/emails")
-    public ArrayList<Email> emailsReceived(@RequestParam(value = "receiver") String receiver) {
+    public ArrayList<Email> emailsReceived(@RequestParam(value = "recipient") String recipient) {
         Connection conn = Database.connect();
-        String query = "select * from \"Emails\" where receiver = ?";
+        String query = "select * from \"Emails\" where recipient = ?";
         ArrayList<Email> emails = new ArrayList<Email>();
 
         //try-with-resources automatically closes the ps variable
         try (PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, receiver);
+            ps.setString(1, recipient);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 /*
                  * create an email object for each row returned from 
                  * the database query and add it to the array list
                  */
-                Email email = new Email(rs.getString("id"), rs.getString("content"), rs.getString("sender"), rs.getString("receiver"), rs.getLong("sent"), rs.getBoolean("starred"));
+                Email email = new Email(rs.getString("id"), rs.getString("content"), rs.getString("sender"), rs.getString("recipient"), rs.getLong("sent"), rs.getBoolean("starred"));
                 emails.add(email);
             }
+            //close connection and result set once finished with db query
+            conn.close();
+            rs.close();
         } catch (SQLException e) {
-            System.out.println("Query error: " + e);
+            System.out.println("Query error line 59: " + e);
         }
-
         return emails;
     }
 
+    //will be used by sendEmail to see if a user exists
+    public User getUser(String recipient) {
+        Connection conn = Database.connect();
+        String query = "select email from \"Users\" where email = ?";
+
+        //email of the recipient if we can find it in database
+        String email = "";
+
+        //used for returning a User object or null further below
+        boolean recipientFound = false;
+
+        //try-with-resources automatically closes the ps variable
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            //set query parameters and then execute
+            ps.setString(1, recipient);
+            ResultSet rs = ps.executeQuery();
+
+            //read returned data from query in result set
+            while (rs.next()) {                
+                email = rs.getString("email");
+                recipientFound = true;
+            }
+            //close connection and result set once finished with db query
+            conn.close();
+            rs.close();
+        } catch (SQLException e) {
+            //return an empty user object if it doesn't exist
+            System.out.println("Query error line 91: " + e);
+            return null;
+        }
+
+        if (recipientFound) {
+            //return a user object with an existing email if found
+            return new User("", email, "");
+        } else {
+            return null;
+        }
+    }
+
     @PostMapping("/sendemail")
-    public void sendEmail(EmailForm emailForm) {
+    public Email sendEmail(@RequestBody EmailForm emailForm) {
         Connection conn = Database.connect();
         String query = "insert into \"Emails\" values (?, ?, ?, ?, ?, ?)";
         
         //create Base64 id using current time and other data
         String id = Security.createBase64ID(emailForm.sender);
 
-        //try-with-resources automatically closes the ps variable
-        try (PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, id);
-            ps.setString(2, emailForm.content);
-            ps.setString(3, emailForm.sender);
-            ps.setString(4, emailForm.receiver);
-            ps.setLong(5, System.currentTimeMillis());
-            ps.setBoolean(6, false);
+        //try to insert email if recipient exists
+        if (getUser(emailForm.recipient) != null) {
+            //try-with-resources automatically closes the ps variable
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, id);
+                ps.setString(2, emailForm.content);
+                ps.setString(3, emailForm.sender);
+                ps.setString(4, emailForm.recipient);
+                ps.setLong(5, System.currentTimeMillis());
+                ps.setBoolean(6, false);
 
-            //insert email to database
-            ps.executeQuery();
-        } catch (SQLException e) {
-            System.out.println("Query error: " + e);
+                //insert email to database
+                ps.executeUpdate();
+
+                //close connection and result set once finished with db query
+                conn.close();
+            } catch (SQLException e) {
+                //return empty email object if it couldn't be inserted
+                System.out.println("Query error line 129: " + e);
+                return new Email("", "", "", "", 0, false);
+            }
+            //return an email object if inserted successfully
+            return new Email("", "", emailForm.sender, emailForm.recipient, System.currentTimeMillis(), false);
+        } else {
+            //return empty email object if the recipient doesn't exist
+            return new Email("", "", "", "", 0, false);
         }
     }
 }
