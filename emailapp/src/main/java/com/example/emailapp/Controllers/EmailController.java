@@ -49,7 +49,7 @@ public class EmailController {
                  * create an email object for each row returned from 
                  * the database query and add it to the array list
                  */
-                Email email = new Email(rs.getString("id"), rs.getString("content"), rs.getString("sender"), rs.getString("recipient"), rs.getLong("sent"), rs.getBoolean("starred"));
+                Email email = new Email(rs.getString("id"), Security.decrypt(rs.getString("content")), rs.getString("sender"), rs.getString("recipient"), rs.getLong("sent"), rs.getBoolean("starred"));
                 emails.add(email);
             }
             //close connection and result set once finished with db query
@@ -113,7 +113,7 @@ public class EmailController {
             //try-with-resources automatically closes the ps variable
             try (PreparedStatement ps = conn.prepareStatement(query)) {
                 ps.setString(1, id);
-                ps.setString(2, emailForm.content);
+                ps.setString(2, Security.encrypt(emailForm.content));
                 ps.setString(3, emailForm.sender);
                 ps.setString(4, emailForm.recipient);
                 ps.setLong(5, System.currentTimeMillis());
