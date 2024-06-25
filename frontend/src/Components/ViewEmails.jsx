@@ -69,6 +69,7 @@ export default function ViewEmails() {
         return (
             <tr>
                 <th><img style={{'width': '16px', 'height': '16px'}} src={starImage}></img></th>
+                <th>{email.subject}</th>
                 <th>{email.content}</th>
                 <th>{email.sender}</th>
                 <th>{time}</th>
@@ -76,12 +77,68 @@ export default function ViewEmails() {
         )
     }
 
+    //testing sending an email with multiple recipients
+    async function sendEmailWithMultipleRecipients(e) {
+        e.preventDefault();
+
+        let inputFields = {
+            "recipients": [
+                'user8@mail.com',
+                'user7@mail.com'
+            ],
+            "subject": "test subject",
+            "content": 'test content'
+        };
+
+        inputFields["sender"] = user['email'];
+
+        let response = await fetch("http://localhost:8080/sendemail", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(inputFields)
+        })
+
+        /* 
+            * if the returned email object's
+            * recipient isn't empty, that means
+            * the email was sent successfully,
+            * as long as at least one of the recipients
+            * exist,  otherwise the email wasn't sent successfully
+            */
+        response.json().then((data) => {
+            if (data['recipient'] == '') {
+                alert("None of the recipients exist");
+            } else {
+                alert("Email sent successfully");
+            }
+        });
+    }
+
+    //testing sending an email with multiple recipients
+    function EmailForm2() {
+        return (
+            <form onSubmit={sendEmailWithMultipleRecipients}>
+                <input id='recipient' placeholder="Recipient"></input>
+                <br></br>
+                <input id='subject' placeholder="Subject"></input>
+                <br></br>
+                <textarea id='content' placeholder="Content"></textarea>
+                <br></br>
+                <button>Send Email2</button>
+            </form>
+        )
+    }
+
     async function sendEmail(e) {
         e.preventDefault();
-        let recipient = e.target.recipient.value;
+        let recipient = e.target.recipients.value;
+        let subject = e.target.subject.value;
         let content = e.target.content.value;
         let inputFields = {
-            "recipient": recipient, 
+            "recipients": [recipient],
+            "subject": subject, 
             "content": content
         };
 
@@ -110,6 +167,13 @@ export default function ViewEmails() {
                 },
                 body: JSON.stringify(inputFields)
             })
+
+            /* 
+            * if the returned email object's
+            * recipient isn't empty, that means
+            * the email was sent successfully, otherwise
+            * it wasn't
+            */
             response.json().then((data) => {
                 if (data['recipient'] == '') {
                     alert("This recipient doesn't exist");
@@ -124,7 +188,9 @@ export default function ViewEmails() {
     function EmailForm() {
         return (
             <form onSubmit={sendEmail}>
-                <input id='recipient' placeholder="Recipient"></input>
+                <input id='recipients' placeholder="Recipient"></input>
+                <br></br>
+                <input id='subject' placeholder="Subject"></input>
                 <br></br>
                 <textarea id='content' placeholder="Content"></textarea>
                 <br></br>
@@ -133,13 +199,13 @@ export default function ViewEmails() {
         )
     }
 
-    return (
-        <div>
-            <h3>Welcome back, {user['email']}!</h3>
-            <button onClick={logOut}>Log Out</button>
+
+    function EmailTable() {
+        return (
             <table>
                 <tr>
                     <th></th>
+                    <th>Subject</th>
                     <th>Content</th>
                     <th>Sender</th>
                     <th>Sent</th>
@@ -155,7 +221,19 @@ export default function ViewEmails() {
                 })}
 
             </table>
+        )
+    }
+
+    return (
+        <div>
+            <h3>Welcome back, {user['email']}!</h3>
+            <button onClick={logOut}>Log Out</button>
+            <EmailTable/>
+            <br></br>
             <EmailForm/>
+            <br></br>
+            <p>Send email with multiple recipients:</p>
+            <EmailForm2/>
         </div>
     )
 }

@@ -12,7 +12,6 @@ export default function HomePage() {
             <br></br>
             <a href="/login">Login</a>
             <br></br>
-            <button onClick={readData}>Click me</button>
         </>
     )
 }
