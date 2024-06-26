@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 export default function ViewEmails() {
     let [emails, setEmails] = useState([]);
     let user = JSON.parse(localStorage.getItem("emailAddress"));
+
+    //might be used later
     let [starImage, setStarImage] = useState("greyStar.jpg");
 
     useEffect(() => {
@@ -77,67 +79,24 @@ export default function ViewEmails() {
         )
     }
 
-    //testing sending an email with multiple recipients
-    async function sendEmailWithMultipleRecipients(e) {
-        e.preventDefault();
-
-        let inputFields = {
-            "recipients": [
-                'user8@mail.com',
-                'user7@mail.com'
-            ],
-            "subject": "test subject",
-            "content": 'test content'
-        };
-
-        inputFields["sender"] = user['email'];
-
-        let response = await fetch("http://localhost:8080/sendemail", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(inputFields)
-        })
-
-        /* 
-            * if the returned email object's
-            * recipient isn't empty, that means
-            * the email was sent successfully,
-            * as long as at least one of the recipients
-            * exist,  otherwise the email wasn't sent successfully
-            */
-        response.json().then((data) => {
-            if (data['recipient'] == '') {
-                alert("None of the recipients exist");
-            } else {
-                alert("Email sent successfully");
-            }
-        });
-    }
-
-    //testing sending an email with multiple recipients
-    function EmailForm2() {
-        return (
-            <form onSubmit={sendEmailWithMultipleRecipients}>
-                <input id='recipient' placeholder="Recipient"></input>
-                <br></br>
-                <input id='subject' placeholder="Subject"></input>
-                <br></br>
-                <textarea id='content' placeholder="Content"></textarea>
-                <br></br>
-                <button>Send Email2</button>
-            </form>
-        )
+    //creates a viewable list of recipients for sending an email
+    let recipients = [];
+    function addRecipient() {
+        let recipient = document.getElementById('recipients').value;
+        recipients.push(recipient);
+        if (recipients.length == 1) {
+            //add this only once
+            document.getElementById('recipientList').innerText = "Recipients:\n";
+        }
+        document.getElementById('recipientList').innerText += recipient + "\n";
     }
 
     async function sendEmail(e) {
         e.preventDefault();
-        let recipient = e.target.recipients.value;
         let subject = e.target.subject.value;
         let content = e.target.content.value;
         let inputFields = {
-            "recipients": [recipient],
+            "recipients": recipients,
             "subject": subject, 
             "content": content
         };
@@ -158,7 +117,10 @@ export default function ViewEmails() {
         }
         inputFields["sender"] = user['email'];
         if (unfinishedFields > 0) {
-            alert(`You have ${unfinishedFields} empty inputs`)
+            alert(`You have ${unfinishedFields} empty inputs`);
+            if (recipients.length == 0) {
+                alert("Please enter at least 1 recipient");
+            }
         } else {
             let response = await fetch("http://localhost:8080/sendemail", {
                 method: "POST",
@@ -179,6 +141,7 @@ export default function ViewEmails() {
                     alert("This recipient doesn't exist");
                 } else {
                     alert("Email sent successfully");
+                    window.location.reload();
                 }
             });
         }
@@ -228,12 +191,14 @@ export default function ViewEmails() {
         <div>
             <h3>Welcome back, {user['email']}!</h3>
             <button onClick={logOut}>Log Out</button>
-            <EmailTable/>
             <br></br>
+            <br></br>
+            <div id='recipientList'></div>
+            <button onClick={addRecipient}>Add Recipient</button>
             <EmailForm/>
             <br></br>
-            <p>Send email with multiple recipients:</p>
-            <EmailForm2/>
+            <EmailTable/>
+            <br></br>
         </div>
     )
 }
