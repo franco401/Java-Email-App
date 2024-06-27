@@ -15,3 +15,5 @@ A full stack, email application using Java in the backend with Spring Boot and J
 ``` npm install react ```
 
 ``` npm install react-router-dom ```
+
+``` npm install axios ```

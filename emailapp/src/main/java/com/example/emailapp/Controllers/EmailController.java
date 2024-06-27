@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import java.sql.*;
 
 import java.util.ArrayList;
-import java.util.Random;
 
 //custom class with a function for Base64 encoding
 import com.example.emailapp.Security;

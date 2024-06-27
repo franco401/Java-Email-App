@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+//used for file uploading
+import axios from "axios";
+
 export default function ViewEmails() {
     let [emails, setEmails] = useState([]);
     let user = JSON.parse(localStorage.getItem("emailAddress"));
@@ -72,7 +75,6 @@ export default function ViewEmails() {
             <tr>
                 <th><img style={{'width': '16px', 'height': '16px'}} src={starImage}></img></th>
                 <th>{email.subject}</th>
-                <th>{email.content}</th>
                 <th>{email.sender}</th>
                 <th>{time}</th>
             </tr>
@@ -162,6 +164,37 @@ export default function ViewEmails() {
         )
     }
 
+    async function uploadFiles(e) {
+        e.preventDefault();
+
+        //get files
+        let files = document.getElementById("fileUpload").files;
+        
+        //create form data for POST request
+        let formData = new FormData();
+        try {
+            /* 
+             * append all files to form data so they can
+             * be uploaded all at once
+             */
+            for (let i = 0; i < files.length; i++) {
+                formData.append("file", files[i], files[i].name);
+            }
+        } catch {
+            alert("No file was selected.");
+        }
+        await axios.post("http://localhost:8080/uploadfiles", formData);
+    }
+
+    function FileUploadForm() {
+        return (
+            <form method="POST" encType="multipart/form-data" onSubmit={uploadFiles}>
+                <input type="file" name="file" id="fileUpload" multiple></input>
+                <input type="submit" value="Upload"></input>
+            </form>
+        )
+    }
+
 
     function EmailTable() {
         return (
@@ -169,7 +202,6 @@ export default function ViewEmails() {
                 <tr>
                     <th></th>
                     <th>Subject</th>
-                    <th>Content</th>
                     <th>Sender</th>
                     <th>Sent</th>
                 </tr>
@@ -189,13 +221,21 @@ export default function ViewEmails() {
 
     return (
         <div>
-            <h3>Welcome back, {user['email']}!</h3>
+            {/* returns a welcome message only if the user object is not null */}
+            {user!==null ? <h3>Welcome back, {user['email']}!</h3> : <h3></h3>}
             <button onClick={logOut}>Log Out</button>
             <br></br>
+            
+            <p>File upload form:</p>
+            <FileUploadForm/>
+            <hr></hr>
+            
             <br></br>
+
             <div id='recipientList'></div>
             <button onClick={addRecipient}>Add Recipient</button>
             <EmailForm/>
+            
             <br></br>
             <EmailTable/>
             <br></br>
