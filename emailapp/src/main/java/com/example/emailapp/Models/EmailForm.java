@@ -6,4 +6,5 @@ public class EmailForm {
     public String subject;
     public String content;
     public String sender;
+    public String fileAttatchments;
 }

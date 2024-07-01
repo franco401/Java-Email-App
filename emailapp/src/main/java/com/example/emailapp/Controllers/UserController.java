@@ -51,7 +51,7 @@ public class UserController {
             conn.close();
             rs.close();
         } catch (SQLException e) {
-            System.out.println("Query error: " + e);
+            System.out.println("Query error line 54: " + e);
         }
         return users;
     }
@@ -75,7 +75,7 @@ public class UserController {
             conn.close();
         } catch (SQLException e) {
             //return an empty object if an error occurred
-            System.out.println("Query error: " + e);
+            System.out.println("Query error line 78: " + e);
             return new User("", "", "");
             
         }
@@ -107,7 +107,7 @@ public class UserController {
             conn.close();
         } catch (SQLException e) {
             //return an empty object if an error occurred
-            System.out.println("Query error: " + e);
+            System.out.println("Query error line 110: " + e);
             return new User("", "", "");
         }
         /*

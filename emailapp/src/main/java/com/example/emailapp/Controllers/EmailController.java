@@ -46,7 +46,7 @@ public class EmailController {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 //create an email object for each row returned from the database query and add it to the array list
-                Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"));
+                Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"));
                 emails.add(email);
             }
             //close connection and result set once finished with db query
@@ -85,7 +85,7 @@ public class EmailController {
             rs.close();
         } catch (SQLException e) {
             //return an empty user object if it doesn't exist
-            System.out.println("Query error line 97: " + e);
+            System.out.println("Query error line 88: " + e);
             return null;
         }
 
@@ -99,7 +99,7 @@ public class EmailController {
     @PostMapping("/sendemail")
     public Email sendEmail(@RequestBody EmailForm emailForm) {
         Connection conn = Database.connect();
-        String query = "insert into \"Emails\" values (?, ?, ?, ?, ?, ?, ?)";
+        String query = "insert into \"Emails\" values (?, ?, ?, ?, ?, ?, ?, ?)";
 
         String id = "";
 
@@ -134,12 +134,13 @@ public class EmailController {
                     ps.setString(5, Security.encrypt(emailForm.content));
                     ps.setLong(6, System.currentTimeMillis());
                     ps.setBoolean(7, false);
+                    ps.setString(8, emailForm.fileAttatchments);
                     
                     //add this current insert query to a batch for bulk insert later below
                     ps.addBatch();
 
                     //append query string for each recipient found
-                    query += ",(?, ?, ?, ?, ?, ?, ?)";
+                    query += ",(?, ?, ?, ?, ?, ?, ?, ?)";
 
                     recipientsFound++;
                     existingUserIndex = i;
@@ -152,14 +153,14 @@ public class EmailController {
             conn.close();
         } catch (SQLException e) {
             //return empty email object if the email couldn't be inserted
-            System.out.println("Query error line 191: " + e);
-            return new Email("", "", "", "", null, 0, false);
+            System.out.println("Query error line 156: " + e);
+            return new Email("", "", "", "", null, 0, false, "");
         }
         if (recipientsFound > 0) {
             //return an email object if inserted successfully with one of the existing recipients
-            return new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false);
+            return new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false, "");
         }
         //return empty email object if none of the recipients exist
-        return new Email("", "", "", "", null, 0, false);
+        return new Email("", "", "", "", null, 0, false, "");
     }
 }

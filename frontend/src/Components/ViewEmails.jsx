@@ -71,12 +71,23 @@ export default function ViewEmails() {
 
     function Email({email}) {
         let time = calculateTime(email.sent);
+        
+        //array of filenames split by the | character as a delimiter
+        let fileAttatchments = email.fileAttatchments.split("|");
+        
         return (
             <tr>
                 <th><img style={{'width': '16px', 'height': '16px'}} src={starImage}></img></th>
                 <th>{email.subject}</th>
                 <th>{email.sender}</th>
                 <th>{time}</th>
+                <th>{email.content}</th>
+                
+                {/**
+                 * only render the file attatchments if the fileAttatchments array contains
+                 * strings of 1 or more file names
+                 */}
+                {fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {return (<th><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></th>);}) : null}
             </tr>
         )
     }
@@ -93,6 +104,23 @@ export default function ViewEmails() {
         document.getElementById('recipientList').innerText += recipient + "\n";
     }
 
+    function getFileAttatchmentString() {
+        let fileAttatchments = document.getElementById("fileUpload").files;
+        let fileAttatchmentString = "";
+
+        for (let i = 0; i < fileAttatchments.length; i++) {
+            fileAttatchmentString += fileAttatchments[i].name;
+            /**
+             * add the delimiter after every filename except the last one
+             * this will create a string such as "a|b|c" instead of "a|b|c|"
+             */
+            if (i != fileAttatchments.length-1) {
+                fileAttatchmentString += "|";
+            }
+        }
+        return fileAttatchmentString;
+    }
+
     async function sendEmail(e) {
         e.preventDefault();
         let subject = e.target.subject.value;
@@ -100,7 +128,7 @@ export default function ViewEmails() {
         let inputFields = {
             "recipients": recipients,
             "subject": subject, 
-            "content": content
+            "content": content, 
         };
 
         /* 
@@ -117,10 +145,14 @@ export default function ViewEmails() {
                 document.getElementById(field).style.borderColor = "";
             }
         }
+
+        //add sender and file attatchments to POST request
         inputFields["sender"] = user['email'];
+        inputFields["fileAttatchments"] = getFileAttatchmentString();
+
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} empty inputs`);
-            if (recipients.length == 0) {
+            if (recipients.length === 0) {
                 alert("Please enter at least 1 recipient");
             }
         } else {
@@ -134,16 +166,18 @@ export default function ViewEmails() {
 
             /* 
             * if the returned email object's
-            * recipient isn't empty, that means
-            * the email was sent successfully, otherwise
-            * it wasn't
+            * recipient isn't empty, upload any files
+            * attatched to the email
             */
             response.json().then((data) => {
                 if (data['recipient'] == '') {
                     alert("This recipient doesn't exist");
                 } else {
-                    alert("Email sent successfully");
-                    window.location.reload();
+                    alert("Email sent successfully!");
+                    //upload files if there are any
+                    if (inputFields["fileAttatchments"] !== "") {
+                        uploadFiles();
+                    }
                 }
             });
         }
@@ -164,37 +198,38 @@ export default function ViewEmails() {
         )
     }
 
-    async function uploadFiles(e) {
-        e.preventDefault();
-
-        //get files
+    async function uploadFiles() {
+        //get uploaded files from file form
         let files = document.getElementById("fileUpload").files;
         
         //create form data for POST request
         let formData = new FormData();
         try {
-            /* 
-             * append all files to form data so they can
-             * be uploaded all at once
-             */
+            //append each file to form data and upload them one at a time
             for (let i = 0; i < files.length; i++) {
-                formData.append("file", files[i], files[i].name);
+                //check if the current file is larger than 8MB
+                if (files[i].size > 8000000) {
+                    alert(`Cannot upload this file because it is larger than 8MB:\n ${files[i].name}`);
+                } else {
+                    formData.append("file", files[i], files[i].name);
+                    await axios.post("http://localhost:8080/uploadfiles", formData);
+                }
             }
         } catch {
             alert("No file was selected.");
         }
-        await axios.post("http://localhost:8080/uploadfiles", formData);
+        alert("File(s) uploaded successfully!");
+        window.location.reload();
     }
 
     function FileUploadForm() {
         return (
             <form method="POST" encType="multipart/form-data" onSubmit={uploadFiles}>
                 <input type="file" name="file" id="fileUpload" multiple></input>
-                <input type="submit" value="Upload"></input>
+                {/* <input type="submit" value="Upload"></input> */}
             </form>
         )
     }
-
 
     function EmailTable() {
         return (
@@ -225,18 +260,18 @@ export default function ViewEmails() {
             {user!==null ? <h3>Welcome back, {user['email']}!</h3> : <h3></h3>}
             <button onClick={logOut}>Log Out</button>
             <br></br>
-            
-            <p>File upload form:</p>
-            <FileUploadForm/>
-            <hr></hr>
-            
             <br></br>
-
+            
             <div id='recipientList'></div>
             <button onClick={addRecipient}>Add Recipient</button>
             <EmailForm/>
-            
+            <hr></hr>
+            <h3>Add file attatchments to email</h3>
+            <FileUploadForm/>
+            <hr></hr>
+
             <br></br>
+            <h3>Your Emails</h3>
             <EmailTable/>
             <br></br>
         </div>
