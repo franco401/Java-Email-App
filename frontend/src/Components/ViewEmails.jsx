@@ -5,6 +5,7 @@ import axios from "axios";
 
 export default function ViewEmails() {
     let [emails, setEmails] = useState([]);
+    let [emailsCopy, setEmailsCopy] = useState([]);
     let user = JSON.parse(localStorage.getItem("emailAddress"));
 
     //might be used later
@@ -27,8 +28,19 @@ export default function ViewEmails() {
 
     //get all emails the logged in user received
     async function getEmails(user) {
-        fetch(`http://localhost:8080/emails?recipient=${user['email']}`)
-        .then((response) => response.json()).then((json) => setEmails(json));
+        let data = await fetch(`http://localhost:8080/emails?recipient=${user['email']}`)
+        .then(response => response.json());
+
+        setEmails(data);
+        
+        /**
+         * create a copy of the emails array in localStorage
+         * so emailsCopy can store it without being a reference
+         * to it (so emailsCopy doesn't affect the original emails array)
+         */
+        localStorage.setItem("emails", JSON.stringify(data));
+        setEmailsCopy(JSON.parse(localStorage.getItem("emails")));
+        localStorage.removeItem("emails");
     }
     
     function logOut() {
@@ -77,7 +89,7 @@ export default function ViewEmails() {
         
         return (
             <tr>
-                <th><img style={{'width': '16px', 'height': '16px'}} src={starImage}></img></th>
+                <th><img style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
                 <th>{email.subject}</th>
                 <th>{email.sender}</th>
                 <th>{time}</th>
@@ -254,6 +266,68 @@ export default function ViewEmails() {
         )
     }
 
+    async function searchEmail(e) {
+        e.preventDefault();
+
+        let searchTerm = e.target.searchTerm.value;
+        let searchCategory = e.target.searchCategory.value;
+
+        let searchPattern = RegExp(searchTerm);
+        let emailsFound = [];
+
+        /**
+         * using regular expression, depending on the selected
+         * category to search for (subject, content, or sender)
+         * the emailsFound array will be filled with email objects
+         * that contain the matching pattern with the search term
+         * 
+         * for example, if the category is subject, and the search term
+         * is "Urgent", the emailsFound array will be filled with email
+         * objects whose subject contains the string "Urgent"
+         */
+
+        switch (searchCategory) {
+            case "subject":
+                for (let i = 0; i < emailsCopy.length; i++) {
+                    if (searchPattern.test(emailsCopy[i].subject.toLowerCase())) {
+                        emailsFound.push(emailsCopy[i]);
+                    }
+                }
+                break;
+            case "content":
+                for (let i = 0; i < emailsCopy.length; i++) {
+                    if (searchPattern.test(emailsCopy[i].content.toLowerCase())) {
+                        emailsFound.push(emailsCopy[i]);
+                    }
+                }
+                break;
+            case "sender":
+                for (let i = 0; i < emailsCopy.length; i++) {
+                    if (searchPattern.test(emailsCopy[i].sender.toLowerCase())) {
+                        emailsFound.push(emailsCopy[i]);
+                    }
+                }
+                break;
+        }
+        setEmails(emailsFound);
+    }
+
+    function SearchEmailForm() {
+        return (
+            <form onSubmit={searchEmail}>
+                <label>Pick a category to search by</label>
+                <select id='searchCategory'>
+                    <option value='subject'>Subject</option>
+                    <option value='content'>Content</option>
+                    <option value='sender'>Sender</option>
+                </select>
+                <br></br>
+                <input id='searchTerm'></input>
+                <button>Search</button>
+            </form>
+        )
+    }
+
     return (
         <div>
             {/* returns a welcome message only if the user object is not null */}
@@ -272,6 +346,7 @@ export default function ViewEmails() {
 
             <br></br>
             <h3>Your Emails</h3>
+            <SearchEmailForm/>
             <EmailTable/>
             <br></br>
         </div>

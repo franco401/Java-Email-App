@@ -23,7 +23,6 @@ import java.util.ArrayList;
 //custom class with a function for Base64 encoding
 import com.example.emailapp.Security;
 
-
 import com.example.emailapp.Models.Email;
 import com.example.emailapp.Models.EmailForm;
 import com.example.emailapp.Models.User;
@@ -37,7 +36,9 @@ public class EmailController {
     @GetMapping("/emails")
     public ArrayList<Email> emailsReceived(@RequestParam(value = "recipient") String recipient) {
         Connection conn = Database.connect();
-        String query = "select * from \"Emails\" where recipient = ?";
+
+        //get all emails sorted by newest to oldesr
+        String query = "select * from \"Emails\" where recipient = ? order by sent desc";
         ArrayList<Email> emails = new ArrayList<Email>();
 
         //try-with-resources automatically closes the ps variable
