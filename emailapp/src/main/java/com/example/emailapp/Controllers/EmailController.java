@@ -25,6 +25,7 @@ import com.example.emailapp.Security;
 
 import com.example.emailapp.Models.Email;
 import com.example.emailapp.Models.EmailForm;
+import com.example.emailapp.Models.StarEmailForm;
 import com.example.emailapp.Models.User;
 
 @CrossOrigin(origins = "http://127.0.0.1:5173/")
@@ -54,7 +55,7 @@ public class EmailController {
             conn.close();
             rs.close();
         } catch (SQLException e) {
-            System.out.println("Query error line 56: " + e);
+            System.out.println("Query error line 58: " + e);
         }
         return emails;
     }
@@ -86,7 +87,7 @@ public class EmailController {
             rs.close();
         } catch (SQLException e) {
             //return an empty user object if it doesn't exist
-            System.out.println("Query error line 88: " + e);
+            System.out.println("Query error line 90: " + e);
             return null;
         }
 
@@ -154,7 +155,7 @@ public class EmailController {
             conn.close();
         } catch (SQLException e) {
             //return empty email object if the email couldn't be inserted
-            System.out.println("Query error line 156: " + e);
+            System.out.println("Query error line 158: " + e);
             return new Email("", "", "", "", null, 0, false, "");
         }
         if (recipientsFound > 0) {
@@ -163,5 +164,29 @@ public class EmailController {
         }
         //return empty email object if none of the recipients exist
         return new Email("", "", "", "", null, 0, false, "");
+    }
+
+    @PostMapping("/staremail")
+    public Email starEmail(@RequestBody StarEmailForm starEmailForm) {
+        Connection conn = Database.connect();
+        String query = "update \"Emails\" set starred = ? where id = ?";
+
+        //try-with-resources automatically closes the ps variable
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            //set query parameters and then execute
+            ps.setBoolean(1, starEmailForm.starred);
+            ps.setString(2, starEmailForm.emailID);
+            
+            //execute query
+            ps.executeUpdate();
+
+            //close connection and result set once finished with db query
+            conn.close();
+        } catch (SQLException e) {
+            //return an empty email object if it couldn't be starred
+            System.out.println("Query error line 187: " + e);
+            return null;
+        }
+        return new Email("", "", "", "", "", 0, starEmailForm.starred, "");
     }
 }

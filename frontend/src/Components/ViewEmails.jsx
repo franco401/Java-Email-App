@@ -8,9 +8,6 @@ export default function ViewEmails() {
     let [emailsCopy, setEmailsCopy] = useState([]);
     let user = JSON.parse(localStorage.getItem("emailAddress"));
 
-    //might be used later
-    let [starImage, setStarImage] = useState("greyStar.jpg");
-
     useEffect(() => {
         /**
          * read the logged in user's email address
@@ -74,11 +71,40 @@ export default function ViewEmails() {
         } else {
             meridiem = "AM";
         }
-        if (hours > 12) hours-=12;
+        if (hours > 12) {
+            hours -= 12;
+        }
         let time = day + " " + hours + ":" + minutes + ":" + seconds + " " + meridiem;  
 
         //let yearsAgo = new Date(Date.now()).getFullYear - new Date(email.sent).getFullYear();
         return time;
+    }
+
+    /**
+     * display a gold star only on the email the user
+     * clicked if it was a grey one by passing in the
+     * email's id to uniquely identify from the rest 
+     */
+    async function starEmail(emailID) {
+        let starEmailForm = {
+            'emailID': emailID
+        };
+
+        let starSource = document.getElementById(emailID).src;
+        if (starSource == 'http://127.0.0.1:5173/greyStar.jpg') {
+            starEmailForm['starred'] = true;
+            document.getElementById(emailID).src = "yellowStar.jpg";
+        } else {
+            starEmailForm['starred'] = false;
+            document.getElementById(emailID).src = "greyStar.jpg";
+        }
+        await fetch("http://localhost:8080/staremail", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(starEmailForm)
+        })
     }
 
     function Email({email}) {
@@ -87,9 +113,15 @@ export default function ViewEmails() {
         //array of filenames split by the | character as a delimiter
         let fileAttatchments = email.fileAttatchments.split("|");
         
+        //check if the email was starred to display a grey or gold star
+        let starImage = "greyStar.jpg";
+        if (email.starred) {
+            starImage = "yellowStar.jpg";
+        }
+
         return (
             <tr>
-                <th><img style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
+                <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
                 <th>{email.subject}</th>
                 <th>{email.sender}</th>
                 <th>{time}</th>
@@ -109,7 +141,7 @@ export default function ViewEmails() {
     function addRecipient() {
         let recipient = document.getElementById('recipients').value;
         recipients.push(recipient);
-        if (recipients.length == 1) {
+        if (recipients.length === 1) {
             //add this only once
             document.getElementById('recipientList').innerText = "Recipients:\n";
         }
@@ -150,7 +182,7 @@ export default function ViewEmails() {
         
         let unfinishedFields = 0;
         for (let field in inputFields) {
-            if (inputFields[field] == "") {
+            if (inputFields[field] === "") {
                 document.getElementById(field).style.borderColor = "red";
                 unfinishedFields++;
             } else {
@@ -182,7 +214,7 @@ export default function ViewEmails() {
             * attatched to the email
             */
             response.json().then((data) => {
-                if (data['recipient'] == '') {
+                if (data['recipient'] === '') {
                     alert("This recipient doesn't exist");
                 } else {
                     alert("Email sent successfully!");
