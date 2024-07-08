@@ -25,7 +25,7 @@ export default function ViewEmails() {
 
     //get all emails the logged in user received
     async function getEmails(user) {
-        let data = await fetch(`http://localhost:8080/emails?recipient=${user['email']}`)
+        let data = await fetch(`http://localhost:8080/emails?recipient=${user["email"]}`)
         .then(response => response.json());
 
         setEmails(data);
@@ -87,15 +87,15 @@ export default function ViewEmails() {
      */
     async function starEmail(emailID) {
         let starEmailForm = {
-            'emailID': emailID
+            "emailID": emailID
         };
 
         let starSource = document.getElementById(emailID).src;
         if (starSource == 'http://127.0.0.1:5173/greyStar.jpg') {
-            starEmailForm['starred'] = true;
+            starEmailForm["starred"] = true;
             document.getElementById(emailID).src = "yellowStar.jpg";
         } else {
-            starEmailForm['starred'] = false;
+            starEmailForm["starred"] = false;
             document.getElementById(emailID).src = "greyStar.jpg";
         }
         await fetch("http://localhost:8080/staremail", {
@@ -104,7 +104,7 @@ export default function ViewEmails() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(starEmailForm)
-        })
+        });
     }
 
     function Email({email}) {
@@ -191,14 +191,14 @@ export default function ViewEmails() {
         }
 
         //add sender and file attatchments to POST request
-        inputFields["sender"] = user['email'];
+        inputFields["sender"] = user["email"];
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} empty inputs`);
-            if (recipients.length === 0) {
-                alert("Please enter at least 1 recipient");
-            }
+        } 
+        if (recipients.length === 0) {
+            alert("Please click the add recipient button at least once first");
         } else {
             let response = await fetch("http://localhost:8080/sendemail", {
                 method: "POST",
@@ -214,7 +214,7 @@ export default function ViewEmails() {
             * attatched to the email
             */
             response.json().then((data) => {
-                if (data['recipient'] === '') {
+                if (data["recipient"] === '') {
                     alert("This recipient doesn't exist");
                 } else {
                     alert("Email sent successfully!");
@@ -347,7 +347,7 @@ export default function ViewEmails() {
     function SearchEmailForm() {
         return (
             <form onSubmit={searchEmail}>
-                <label>Pick a category to search by</label>
+                <label>Search by</label>
                 <select id='searchCategory'>
                     <option value='subject'>Subject</option>
                     <option value='content'>Content</option>
@@ -360,25 +360,72 @@ export default function ViewEmails() {
         )
     }
 
+    function FilterEmailForm() {
+        return (
+            <form onSubmit={filterEmails}>
+                <label>Filter emails by</label>
+                <select id='sortBy'>
+                    <option value="starred">Starred only</option>
+                    <option value="unstarred">Unstarred only</option>
+                    <option value="all">Get all emails</option>
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                </select>
+                <button>Filter</button>
+            </form>
+        )
+    }
+
+    /**
+     * sends a post request to get a filtered list
+     * of emails based on starred or unstarred emails
+     */
+    async function filterEmails(e) {
+        e.preventDefault();
+
+        let filterEmailForm = {
+            "recipient": user["email"],
+            "sortBy": e.target.sortBy.value
+        };
+                
+        let response = await fetch("http://localhost:8080/filteremails", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(filterEmailForm)
+        });
+
+        response.json().then((data) => {
+            setEmails(data);
+        });
+    }
+
     return (
         <div>
             {/* returns a welcome message only if the user object is not null */}
-            {user!==null ? <h3>Welcome back, {user['email']}!</h3> : <h3></h3>}
+            {user!==null ? <h3>Welcome back, {user["email"]}!</h3> : <h3></h3>}
             <button onClick={logOut}>Log Out</button>
-            <br></br>
-            <br></br>
+            <hr></hr>
             
             <div id='recipientList'></div>
+            <h3>Send an email</h3>
             <button onClick={addRecipient}>Add Recipient</button>
             <EmailForm/>
             <hr></hr>
             <h3>Add file attatchments to email</h3>
             <FileUploadForm/>
+            
+            <hr></hr>
+            <h3>Search Emails</h3>
+            <SearchEmailForm/>
+            <hr></hr>
+            
+            <h3>Filter Emails</h3>
+            <FilterEmailForm/>
             <hr></hr>
 
-            <br></br>
             <h3>Your Emails</h3>
-            <SearchEmailForm/>
             <EmailTable/>
             <br></br>
         </div>
