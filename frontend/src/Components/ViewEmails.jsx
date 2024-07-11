@@ -137,15 +137,19 @@ export default function ViewEmails() {
     }
 
     //creates a viewable list of recipients for sending an email
-    let recipients = [];
+    let [recipients, setRecipients] = useState([]);
     function addRecipient() {
         let recipient = document.getElementById('recipients').value;
-        recipients.push(recipient);
+        setRecipients((recipients) => [...recipients, recipient])
         if (recipients.length === 1) {
             //add this only once
             document.getElementById('recipientList').innerText = "Recipients:\n";
         }
-        document.getElementById('recipientList').innerText += recipient + "\n";
+    }
+
+    //removes a recipient from the recipients list
+    function removeRecipient(recipientToRemove) {
+        setRecipients(recipients.filter((recipient) => recipient != recipientToRemove))
     }
 
     function getFileAttatchmentString() {
@@ -194,12 +198,22 @@ export default function ViewEmails() {
         inputFields["sender"] = user["email"];
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
+        //boolean if the logged in user makes themself a recipient
+        let recipientIsSelf = false;
+
+        for (let i = 0; i < recipients.length; i++) {
+            if (recipients[i] === user['email']) {
+                recipientIsSelf = true;
+                break;
+            }
+        }
+
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} empty inputs`);
         } 
         if (recipients.length === 0) {
             alert("Please click the add recipient button at least once first");
-        } else {
+        } else if (!recipientIsSelf) {
             let response = await fetch("http://localhost:8080/sendemail", {
                 method: "POST",
                 headers: {
@@ -224,6 +238,8 @@ export default function ViewEmails() {
                     }
                 }
             });
+        } else {
+            alert("You can't send an email to yourself");
         }
 
     }
@@ -407,8 +423,13 @@ export default function ViewEmails() {
             {user!==null ? <h3>Welcome back, {user["email"]}!</h3> : <h3></h3>}
             <button onClick={logOut}>Log Out</button>
             <hr></hr>
-            
+
             <div id='recipientList'></div>
+            
+            {recipients.map((recipient) => {
+                return (<div>{recipient}<button onClick={() => {removeRecipient(recipient)}}>Remove</button></div>)
+            })}
+
             <h3>Send an email</h3>
             <button onClick={addRecipient}>Add Recipient</button>
             <EmailForm/>
