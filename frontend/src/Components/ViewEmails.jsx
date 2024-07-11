@@ -140,7 +140,13 @@ export default function ViewEmails() {
     let [recipients, setRecipients] = useState([]);
     function addRecipient() {
         let recipient = document.getElementById('recipients').value;
-        setRecipients((recipients) => [...recipients, recipient])
+        
+        //add a recipient as long as it isn't the user themself
+        if (recipient !== user["email"]) {
+            setRecipients((recipients) => [...recipients, recipient]);
+        } else {
+            alert("You can't add yourself as a recipient");
+        }
         if (recipients.length === 1) {
             //add this only once
             document.getElementById('recipientList').innerText = "Recipients:\n";
@@ -198,22 +204,13 @@ export default function ViewEmails() {
         inputFields["sender"] = user["email"];
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
-        //boolean if the logged in user makes themself a recipient
-        let recipientIsSelf = false;
-
-        for (let i = 0; i < recipients.length; i++) {
-            if (recipients[i] === user['email']) {
-                recipientIsSelf = true;
-                break;
-            }
-        }
 
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} empty inputs`);
         } 
         if (recipients.length === 0) {
             alert("Please click the add recipient button at least once first");
-        } else if (!recipientIsSelf) {
+        } else {
             let response = await fetch("http://localhost:8080/sendemail", {
                 method: "POST",
                 headers: {
@@ -238,10 +235,7 @@ export default function ViewEmails() {
                     }
                 }
             });
-        } else {
-            alert("You can't send an email to yourself");
         }
-
     }
 
     function EmailForm() {
@@ -276,7 +270,7 @@ export default function ViewEmails() {
                 }
             }
         } catch {
-            alert("No file was selected.");
+            alert("No file was selected");
         }
         alert("File(s) uploaded successfully!");
         window.location.reload();
