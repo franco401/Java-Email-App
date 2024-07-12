@@ -35,7 +35,7 @@ import com.example.emailapp.Models.User;
 public class EmailController {
 
     //get all emails a specific user received using the url pattern /emails?recipient=[username]
-    @GetMapping("/emails")
+    @GetMapping("/emailsreceived")
     public ArrayList<Email> emailsReceived(@RequestParam(value = "recipient") String recipient) {
         Connection conn = Database.connect();
 
@@ -204,8 +204,11 @@ public class EmailController {
              case "unstarred":
                 query = "select * from \"Emails\" where recipient = ? and starred = false";
                 break;
-            case "all":
+            case "allReceived":
                 query = "select * from \"Emails\" where recipient = ?";
+                break;
+            case "allSent":
+                query = "select * from \"Emails\" where sender = ? order by sent desc";
                 break;
             case "newest":
                 query = "select * from \"Emails\" where recipient = ? order by sent desc";
@@ -234,7 +237,7 @@ public class EmailController {
             rs.close();
         } catch (SQLException e) {
             //return null if the query couldn't execute
-            System.out.println("Query error line 237: " + e);
+            System.out.println("Query error line 240: " + e);
             return null;
         }
         return emails;

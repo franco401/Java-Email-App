@@ -25,7 +25,7 @@ export default function ViewEmails() {
 
     //get all emails the logged in user received
     async function getEmails(user) {
-        let data = await fetch(`http://localhost:8080/emails?recipient=${user["email"]}`)
+        let data = await fetch(`http://localhost:8080/emailsreceived?recipient=${user["email"]}`)
         .then(response => response.json());
 
         setEmails(data);
@@ -124,6 +124,7 @@ export default function ViewEmails() {
                 <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
                 <th>{email.subject}</th>
                 <th>{email.sender}</th>
+                <th>{email.recipient}</th>
                 <th>{time}</th>
                 <th>{email.content}</th>
                 
@@ -292,7 +293,9 @@ export default function ViewEmails() {
                     <th></th>
                     <th>Subject</th>
                     <th>Sender</th>
+                    <th>Recipient</th>
                     <th>Sent</th>
+                    <th>Content</th>
                 </tr>
 
                 {
@@ -377,7 +380,8 @@ export default function ViewEmails() {
                 <select id='sortBy'>
                     <option value="starred">Starred only</option>
                     <option value="unstarred">Unstarred only</option>
-                    <option value="all">Get all emails</option>
+                    <option value="allReceived">All emails received</option>
+                    <option value="allSent">All emails sent</option>
                     <option value="newest">Newest first</option>
                     <option value="oldest">Oldest first</option>
                 </select>
