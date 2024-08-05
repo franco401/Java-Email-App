@@ -1,3 +1,5 @@
+import 'bootstrap/dist/css/bootstrap.css';
+
 export default function RegisterPage() {
     async function register(e) {
         e.preventDefault();
@@ -38,7 +40,8 @@ export default function RegisterPage() {
                 if (data['email'] === '') {
                     alert("The username and/or password are already taken.");
                 } else {
-                    //window.location.href = "/login";
+                    alert("Successfully registered account");
+                    window.location.href = "/login";
                 }
             });
         }

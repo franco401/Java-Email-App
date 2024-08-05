@@ -3,10 +3,32 @@ import { useEffect, useState } from "react";
 //used for file uploading
 import axios from "axios";
 
+import 'bootstrap/dist/css/bootstrap.css';
+
 export default function ViewEmails() {
     let [emails, setEmails] = useState([]);
     let [emailsCopy, setEmailsCopy] = useState([]);
     let user = JSON.parse(localStorage.getItem("emailAddress"));
+
+    let flexStyleObj = {
+        'display': 'flex', 
+        'justifyContent': 'center', 
+        'gap': '5%'
+    };
+
+    let viewEmailObj = {
+        'display': 'none', 
+        'flexDirection': 'column', 
+        'alignItems': 'center',
+        'position': 'absolute',
+        'margin': 'auto',
+        'width': '50%',
+        'padding': '10px',
+        'bottom': '10%',
+        'right': '40%'
+    };
+
+    let [fileAttatchments, setFileAttatchments] = useState([]);
 
     useEffect(() => {
         /**
@@ -107,11 +129,37 @@ export default function ViewEmails() {
         });
     }
 
+    let restOfPage = document.getElementById("restOfPage");
+    
+    //shows a container showing the currently selected email contents
+    function viewEmail(email) {
+        //hide the rest of page to better focus on the currently viewing email
+        document.getElementById("restOfPage").style = "display: none";
+        
+        //set previously hidden container with current viewing email visible 
+        document.getElementById("viewEmailContainer").style = "display: flex; flex-direction: column; align-items: center;";
+
+        //set values based on current email
+        document.getElementById("currentSender").value = email.sender;
+        document.getElementById("currentSubject").value = email.subject;
+        document.getElementById("currentContent").value = email.content;
+        document.getElementById("currentDate").value = calculateTime(email.sent);
+
+        //array of filenames split by the | character as a delimiter
+        setFileAttatchments(email.fileAttatchments.split("|"));
+    }
+
+    function closeEmail() {
+        //make the rest of the page visible again
+        document.getElementById("restOfPage").style = restOfPage.style;
+
+        //hide the email container
+        document.getElementById("viewEmailContainer").style = "display: none";
+    }
+
     function Email({email}) {
         let time = calculateTime(email.sent);
         
-        //array of filenames split by the | character as a delimiter
-        let fileAttatchments = email.fileAttatchments.split("|");
         
         //check if the email was starred to display a grey or gold star
         let starImage = "greyStar.jpg";
@@ -120,19 +168,16 @@ export default function ViewEmails() {
         }
 
         return (
-            <tr>
+            <tr onClick={() => {viewEmail(email)}}>
                 <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
-                <th>{email.subject}</th>
-                <th>{email.sender}</th>
-                <th>{email.recipient}</th>
-                <th>{time}</th>
-                <th>{email.content}</th>
-                
                 {/**
-                 * only render the file attatchments if the fileAttatchments array contains
-                 * strings of 1 or more file names
+                 * truncate the strings up to a length of 20 
+                 * to keep the table viewable
                  */}
-                {fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {return (<th><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></th>);}) : null}
+                <th>{email.sender.length > 20 ? email.sender.substring(0, 17) + "..." : email.sender}</th>
+                <th>{email.subject.length > 20 ? email.subject.substring(0, 17) + "..." : email.subject}</th>
+                <th>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
+                <th>{time}</th>
             </tr>
         )
     }
@@ -144,11 +189,16 @@ export default function ViewEmails() {
         
         //add a recipient as long as it isn't the user themself
         if (recipient !== user["email"]) {
-            setRecipients((recipients) => [...recipients, recipient]);
+            //make sure the recipient's name has at least 1 character
+            if (recipient.length > 0) {
+                setRecipients((recipients) => [...recipients, recipient]);
+            } else {
+                alert("Please enter at least 1 character");
+            }
         } else {
             alert("You can't add yourself as a recipient");
         }
-        if (recipients.length === 1) {
+        if (recipients.length === 0) {
             //add this only once
             document.getElementById('recipientList').innerText = "Recipients:\n";
         }
@@ -288,14 +338,13 @@ export default function ViewEmails() {
 
     function EmailTable() {
         return (
-            <table>
+            <table className="table">
                 <tr>
                     <th></th>
-                    <th>Subject</th>
                     <th>Sender</th>
-                    <th>Recipient</th>
-                    <th>Sent</th>
+                    <th>Subject</th>
                     <th>Content</th>
+                    <th>Sent</th>
                 </tr>
 
                 {
@@ -366,7 +415,6 @@ export default function ViewEmails() {
                     <option value='content'>Content</option>
                     <option value='sender'>Sender</option>
                 </select>
-                <br></br>
                 <input id='searchTerm'></input>
                 <button>Search</button>
             </form>
@@ -417,36 +465,80 @@ export default function ViewEmails() {
 
     return (
         <div>
-            {/* returns a welcome message only if the user object is not null */}
-            {user!==null ? <h3>Welcome back, {user["email"]}!</h3> : <h3></h3>}
-            <button onClick={logOut}>Log Out</button>
-            <hr></hr>
+            <div id='restOfPage'>
+                {/* returns a welcome message only if the user object is not null */}
+                {user!==null ? <div style={flexStyleObj}> <h3>Welcome back, {user["email"]}!</h3><button onClick={logOut}>Log Out</button></div> : <h3></h3>}
+                <hr></hr>
+                <div className="flex-container" style={flexStyleObj}>            
+                    <div>
+                        <h5>Search Emails</h5>
+                        <SearchEmailForm/>
+                    </div>
 
-            <div id='recipientList'></div>
-            
-            {recipients.map((recipient) => {
-                return (<div>{recipient}<button onClick={() => {removeRecipient(recipient)}}>Remove</button></div>)
-            })}
+                    <div>
+                        <h5>Filter Emails</h5>
+                        <FilterEmailForm/>
+                    </div>
+                </div>
+                
+                <hr></hr>
+                <h3 style={{'textAlign': 'center'}}>Your Emails</h3>
+                <EmailTable/>
+                <hr></hr>
 
-            <h3>Send an email</h3>
-            <button onClick={addRecipient}>Add Recipient</button>
-            <EmailForm/>
-            <hr></hr>
-            <h3>Add file attatchments to email</h3>
-            <FileUploadForm/>
-            
-            <hr></hr>
-            <h3>Search Emails</h3>
-            <SearchEmailForm/>
-            <hr></hr>
-            
-            <h3>Filter Emails</h3>
-            <FilterEmailForm/>
-            <hr></hr>
+                <div className="flex-container" style={flexStyleObj} id='recipientList'></div>
+                    {recipients.map((recipient) => {
+                        return (<div className="flex-container" style={flexStyleObj}>{recipient}<button onClick={() => {removeRecipient(recipient)}}>Remove</button></div>)
+                    })}
 
-            <h3>Your Emails</h3>
-            <EmailTable/>
+                <div className="flex-container" style={flexStyleObj}>
+                    <div>
+                        <h5>Send an email</h5>
+                        <button onClick={addRecipient}>Add Recipient</button>
+                        <EmailForm/>
+                    </div>
+                    <div>
+                        <h5>Add file attatchments to email</h5>
+                        <FileUploadForm/>
+                    </div>
+                </div>
+            </div>
+            
+            <div id='viewEmailContainer' style={viewEmailObj}>
+                <button onClick={closeEmail}>Close</button>
+                <div>
+                    <label>Sender</label>
+                    <br></br>
+                    <input readOnly id='currentSender'></input>
+                </div>
+                <div>
+                    <label>Subject</label>
+                    <br></br>
+                    <input readOnly id='currentSubject'></input>
+                </div>
+                <div>
+                    <label>Sent</label>
+                    <br></br>
+                    <input readOnly id='currentDate'></input>
+                </div>
+                <div>
+                    <label>Content</label>
+                    <br></br>
+                    <textarea readOnly id='currentContent' style={{'resize': 'none', 'width': '350px', 'height': '200px'}}></textarea>
+                </div>
+                {/**
+                 * only render the file attatchments if the fileAttatchments array contains
+                 * strings of 1 or more file names
+                 */
+                 //array of filenames split by the | character as a delimiter
+                 }
+                {fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {return (<div><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></div>);}) : null}
+            </div>
+
             <br></br>
+            <br></br>
+            <br></br>
+
         </div>
     )
 }

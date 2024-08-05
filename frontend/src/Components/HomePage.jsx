@@ -1,9 +1,6 @@
-export default function HomePage() {
-    async function readData() {
-        fetch("http://localhost:8080/emails?receiver=user8@mail.com")
-        .then((response) => response.json()).then((json) => console.log(json));
-    }
+import 'bootstrap/dist/css/bootstrap.css';
 
+export default function HomePage() {
     return (
         <>
             <h1>Home Page</h1>

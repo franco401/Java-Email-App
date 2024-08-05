@@ -1,3 +1,5 @@
+import 'bootstrap/dist/css/bootstrap.css';
+
 export default function LoginPage() {
     async function login(e) {
         e.preventDefault();

@@ -14,15 +14,17 @@ A full stack, email application using Java in the backend with Spring Boot and J
 * Spring Boot 3.3.0
 * Java 22
 
-# Spring Boot Dependencies
+# Spring Boot Dependencies Used
 * Lombok
 * Spring Web
 * PostgreSQL Driver
 * Apache Commons Codec 1.17
 
-# React Dependencies
+# React Dependencies Used
 ``` npm install react ```
 
 ``` npm install react-router-dom ```
 
 ``` npm install axios ```
+
+``` npm install bootstrap@5.3.3  ```
