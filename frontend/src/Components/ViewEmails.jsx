@@ -28,6 +28,12 @@ export default function ViewEmails() {
         'right': '40%'
     };
 
+    let textAreaStyleObj = {
+        'resize': 'none', 
+        'width': '350px', 
+        'height': '200px'
+    };
+
     let [fileAttatchments, setFileAttatchments] = useState([]);
 
     useEffect(() => {
@@ -169,7 +175,7 @@ export default function ViewEmails() {
 
         return (
             <tr onClick={() => {viewEmail(email)}}>
-                <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "16px", "height": "16px"}} src={starImage}></img></th>
+                <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "32px", "height": "32px"}} src={starImage}></img></th>
                 {/**
                  * truncate the strings up to a length of 20 
                  * to keep the table viewable
@@ -236,29 +242,10 @@ export default function ViewEmails() {
             "content": content, 
         };
 
-        /* 
-         * loop through each input field and check if any
-         * are empty and highlight them red
-         */
-        
-        let unfinishedFields = 0;
-        for (let field in inputFields) {
-            if (inputFields[field] === "") {
-                document.getElementById(field).style.borderColor = "red";
-                unfinishedFields++;
-            } else {
-                document.getElementById(field).style.borderColor = "";
-            }
-        }
-
         //add sender and file attatchments to POST request
         inputFields["sender"] = user["email"];
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
-
-        if (unfinishedFields > 0) {
-            alert(`You have ${unfinishedFields} empty inputs`);
-        } 
         if (recipients.length === 0) {
             alert("Please click the add recipient button at least once first");
         } else {
@@ -292,11 +279,11 @@ export default function ViewEmails() {
     function EmailForm() {
         return (
             <form onSubmit={sendEmail}>
-                <input id='recipients' placeholder="Recipient"></input>
+                <input title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" id='recipients' placeholder="Recipient"></input>
                 <br></br>
-                <input id='subject' placeholder="Subject"></input>
+                <input required id='subject' placeholder="Subject"></input>
                 <br></br>
-                <textarea id='content' placeholder="Content"></textarea>
+                <textarea required style={textAreaStyleObj} id='content' placeholder="Content"></textarea>
                 <br></br>
                 <button>Send Email</button>
             </form>
@@ -524,7 +511,7 @@ export default function ViewEmails() {
                 <div>
                     <label>Content</label>
                     <br></br>
-                    <textarea readOnly id='currentContent' style={{'resize': 'none', 'width': '350px', 'height': '200px'}}></textarea>
+                    <textarea readOnly id='currentContent' style={textAreaStyleObj}></textarea>
                 </div>
                 {/**
                  * only render the file attatchments if the fileAttatchments array contains
@@ -532,6 +519,7 @@ export default function ViewEmails() {
                  */
                  //array of filenames split by the | character as a delimiter
                  }
+                <div>Download file attatchments:</div>
                 {fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {return (<div><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></div>);}) : null}
             </div>
 
