@@ -115,7 +115,7 @@ export default function ViewEmails() {
         let starSource = document.getElementById(emailID).src;
         if (starSource == 'http://127.0.0.1:5173/greyStar.jpg') {
             starEmailForm["starred"] = true;
-            document.getElementById(emailID).src = "yellowStar.jpg";
+            document.getElementById(emailID).src = "goldStar.jpg";
         } else {
             starEmailForm["starred"] = false;
             document.getElementById(emailID).src = "greyStar.jpg";
@@ -164,7 +164,7 @@ export default function ViewEmails() {
         //check if the email was starred to display a grey or gold star
         let starImage = "greyStar.jpg";
         if (email.starred) {
-            starImage = "yellowStar.jpg";
+            starImage = "goldStar.jpg";
         }
 
         return (
