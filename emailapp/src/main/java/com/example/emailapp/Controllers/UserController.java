@@ -32,7 +32,7 @@ public class UserController {
     @GetMapping("/users")
     public ArrayList<User> getUsers() {
         Connection conn = Database.connect();
-        String query = "select * from \"Users\"";
+        String query = "select id, email, password from \"Users\"";
         ArrayList<User> users = new ArrayList<User>();
 
         //try-with-resources automatically closes the ps variable

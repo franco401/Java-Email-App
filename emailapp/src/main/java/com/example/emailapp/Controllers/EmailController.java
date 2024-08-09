@@ -35,7 +35,7 @@ public class EmailController {
         Connection conn = Database.connect();
 
         //get up to the 25 most recent emails sorted by newest to oldest
-        String query = "select * from \"Emails\" where recipient = ? order by sent desc offset ? limit 25";
+        String query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where recipient = ? order by sent desc offset ? limit 25";
         ArrayList<Email> emails = new ArrayList<Email>();
 
         //try-with-resources automatically closes the ps variable
@@ -195,10 +195,10 @@ public class EmailController {
         //switch statement to determine which query to perform depending on what the user wants to filter their emails by
         switch (filterEmailForm.sortBy) {
             case "starred":
-                query = "select * from \"Emails\" where recipient = ? and starred = true";
+                query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where recipient = ? and starred = true";
                 break;
             case "allSent":
-                query = "select * from \"Emails\" where sender = ? order by sent desc";
+                query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where sender = ? order by sent desc";
                 break;
         }
         
