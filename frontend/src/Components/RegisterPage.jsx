@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.css';
 
 export default function RegisterPage() {
+    document.title = "Register Page";
+
     async function register(e) {
         e.preventDefault();
         let email = e.target.email.value;

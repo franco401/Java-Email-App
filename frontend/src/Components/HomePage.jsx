@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.css';
 
 export default function HomePage() {
+    document.title = "Home Page";
+
     let container = {
         'position': 'relative',
         'height': '650px'

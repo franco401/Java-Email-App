@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.css';
 
 export default function LoginPage() {
+    document.title = "Login Page";
+
     async function login(e) {
         e.preventDefault();
         let email = e.target.email.value;

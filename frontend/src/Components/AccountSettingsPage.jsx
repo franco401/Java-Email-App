@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 
 export default function AccountSettingsPage() {
+    document.title = "Account Settings";
 
     //load user object from localStorage
     let user = JSON.parse(localStorage.getItem("emailAddress"));

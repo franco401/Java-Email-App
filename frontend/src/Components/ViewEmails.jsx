@@ -6,6 +6,7 @@ import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.css';
 
 export default function ViewEmails() {
+    document.title = "Your Emails";
 
     //css style object for some div elements in a flex display
     let flexStyleObj = {

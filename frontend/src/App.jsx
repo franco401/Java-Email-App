@@ -7,6 +7,7 @@ import ViewEmails from './Components/ViewEmails';
 import AccountSettingsPage from './Components/AccountSettingsPage';
 
 function App() {
+  document.title = "Home Page";
   return (
     <BrowserRouter>
       <Routes>

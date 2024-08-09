@@ -195,7 +195,7 @@ public class EmailController {
         //switch statement to determine which query to perform depending on what the user wants to filter their emails by
         switch (filterEmailForm.sortBy) {
             case "starred":
-                query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where recipient = ? and starred = true";
+                query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where recipient = ? and starred = true order by sent desc";
                 break;
             case "allSent":
                 query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from \"Emails\" where sender = ? order by sent desc";
