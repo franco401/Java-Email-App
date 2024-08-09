@@ -2,12 +2,8 @@ package com.example.emailapp.Controllers;
 
 import com.example.emailapp.Database;
 
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-//used to read url parameters such as /greeting?name="Adam"
-import org.springframework.web.bind.annotation.RequestParam;
 
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
@@ -24,28 +20,28 @@ import java.util.ArrayList;
 import com.example.emailapp.Security;
 
 import com.example.emailapp.Models.Email;
+import com.example.emailapp.Models.User;
+import com.example.emailapp.Models.GetEmailsForm;
 import com.example.emailapp.Models.EmailForm;
 import com.example.emailapp.Models.FilterEmailForm;
 import com.example.emailapp.Models.StarEmailForm;
-import com.example.emailapp.Models.User;
 
 @CrossOrigin(origins = "http://127.0.0.1:5173/")
 
 @RestController
 public class EmailController {
-
-    //get all emails a specific user received using the url pattern /emails?recipient=[username]
-    @GetMapping("/emailsreceived")
-    public ArrayList<Email> emailsReceived(@RequestParam(value = "recipient") String recipient) {
+    @PostMapping("/emailsreceived")
+    public ArrayList<Email> emailsReceived(@RequestBody GetEmailsForm getEmailsForm) {
         Connection conn = Database.connect();
 
-        //get all emails sorted by newest to oldest
-        String query = "select * from \"Emails\" where recipient = ? order by sent desc";
+        //get up to the 25 most recent emails sorted by newest to oldest
+        String query = "select * from \"Emails\" where recipient = ? order by sent desc offset ? limit 25";
         ArrayList<Email> emails = new ArrayList<Email>();
 
         //try-with-resources automatically closes the ps variable
         try (PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, recipient);
+            ps.setString(1, getEmailsForm.recipient);
+            ps.setInt(2, getEmailsForm.offset);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 //create an email object for each row returned from the database query and add it to the array list
@@ -56,7 +52,7 @@ public class EmailController {
             conn.close();
             rs.close();
         } catch (SQLException e) {
-            System.out.println("Query error line 59: " + e);
+            System.out.println("Query error line 55: " + e);
         }
         return emails;
     }
@@ -88,7 +84,7 @@ public class EmailController {
             rs.close();
         } catch (SQLException e) {
             //return null if a user doesn't exist
-            System.out.println("Query error line 91: " + e);
+            System.out.println("Query error line 87: " + e);
             return null;
         }
 
@@ -156,7 +152,7 @@ public class EmailController {
             conn.close();
         } catch (SQLException e) {
             //return empty email object if the email couldn't be inserted
-            System.out.println("Query error line 159: " + e);
+            System.out.println("Query error line 155: " + e);
             return new Email("", "", "", "", null, 0, false, "");
         }
         if (recipientsFound > 0) {
@@ -185,7 +181,7 @@ public class EmailController {
             conn.close();
         } catch (SQLException e) {
             //return null if the email couldn't be starred
-            System.out.println("Query error line 188: " + e);
+            System.out.println("Query error line 184: " + e);
             return null;
         }
         return new Email("", "", "", "", "", 0, starEmailForm.starred, "");
@@ -201,20 +197,8 @@ public class EmailController {
             case "starred":
                 query = "select * from \"Emails\" where recipient = ? and starred = true";
                 break;
-             case "unstarred":
-                query = "select * from \"Emails\" where recipient = ? and starred = false";
-                break;
-            case "allReceived":
-                query = "select * from \"Emails\" where recipient = ?";
-                break;
             case "allSent":
                 query = "select * from \"Emails\" where sender = ? order by sent desc";
-                break;
-            case "newest":
-                query = "select * from \"Emails\" where recipient = ? order by sent desc";
-                break;
-            case "oldest":
-                query = "select * from \"Emails\" where recipient = ? order by sent asc";
                 break;
         }
         
@@ -237,7 +221,7 @@ public class EmailController {
             rs.close();
         } catch (SQLException e) {
             //return null if the query couldn't execute
-            System.out.println("Query error line 240: " + e);
+            System.out.println("Query error line 236: " + e);
             return null;
         }
         return emails;

@@ -6,35 +6,57 @@ import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.css';
 
 export default function ViewEmails() {
+
+    //css style object for some div elements in a flex display
+    let flexStyleObj = {
+        "display": 'flex', 
+        "justifyContent": 'center', 
+        "gap": '5%'
+    };
+
+    //css style object for the menu when viewing an email's contents
+    let viewEmailObj = {
+        "display": 'none', 
+        "flexDirection": 'column', 
+        "alignItems": 'center',
+        "position": 'absolute',
+        "margin": 'auto',
+        "width": '50%',
+        "padding": '10px',
+        "bottom": '10%',
+        "right": '40%'
+    };
+
+    //css style object for textarea elements
+    let textAreaStyleObj = {
+        "resize": 'none', 
+        "width": '350px', 
+        "height": '200px'
+    };
+
+    //css style object to center text for some elements
+    let textAlignObj = {'textAlign': "center"}
+
+    //list of emails from database query
     let [emails, setEmails] = useState([]);
+
+    //copy of user emails used for searching
     let [emailsCopy, setEmailsCopy] = useState([]);
+    
+    //load user object from localStorage
     let user = JSON.parse(localStorage.getItem("emailAddress"));
 
-    let flexStyleObj = {
-        'display': 'flex', 
-        'justifyContent': 'center', 
-        'gap': '5%'
-    };
-
-    let viewEmailObj = {
-        'display': 'none', 
-        'flexDirection': 'column', 
-        'alignItems': 'center',
-        'position': 'absolute',
-        'margin': 'auto',
-        'width': '50%',
-        'padding': '10px',
-        'bottom': '10%',
-        'right': '40%'
-    };
-
-    let textAreaStyleObj = {
-        'resize': 'none', 
-        'width': '350px', 
-        'height': '200px'
-    };
-
+    //array that will be made from a string that will be separated by a delimiter
     let [fileAttatchments, setFileAttatchments] = useState([]);
+
+    //offset used for sql query when getting a user's list of emails
+    let [offset, setOffset] = useState(0);
+
+    //how much do we change the offset with next/prev email buttons below the table
+    let offsetChange = 25;
+
+    //used to display what 'page' the user is in when going through many emails
+    let [page, setPage] = useState(1);
 
     useEffect(() => {
         /**
@@ -49,12 +71,21 @@ export default function ViewEmails() {
         } else {
             getEmails(user);
         }
-    }, [])
-
-    //get all emails the logged in user received
+    }, [offset]);
+    
+    //get a number of the most recent emails the logged in user received
     async function getEmails(user) {
-        let data = await fetch(`http://localhost:8080/emailsreceived?recipient=${user["email"]}`)
-        .then(response => response.json());
+        let getEmailFormData = {
+            "recipient": user["email"],
+            "offset": offset
+        };
+        let data = await fetch("http://localhost:8080/emailsreceived", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(getEmailFormData)
+        }).then(response => response.json());
 
         setEmails(data);
         
@@ -62,10 +93,25 @@ export default function ViewEmails() {
          * create a copy of the emails array in localStorage
          * so emailsCopy can store it without being a reference
          * to it (so emailsCopy doesn't affect the original emails array)
+         * so then it can be used for email searching with regex further below
          */
         localStorage.setItem("emails", JSON.stringify(data));
         setEmailsCopy(JSON.parse(localStorage.getItem("emails")));
         localStorage.removeItem("emails");
+
+        //disable View Previous Emails button when on the first set of emails
+        if (page == 1) {
+            document.getElementById("viewPrevButton").disabled = true;
+        } else {
+            document.getElementById("viewPrevButton").disabled = false;
+        }
+
+        //disable View Next Emails button when the next set of emails is less than 25
+        if (data.length < offsetChange) {
+            document.getElementById("viewNextButton").disabled = true;
+        } else {
+            document.getElementById("viewNextButton").disabled = false;
+        }
     }
     
     function logOut() {
@@ -174,7 +220,7 @@ export default function ViewEmails() {
         }
 
         return (
-            <tr onClick={() => {viewEmail(email)}}>
+            <tr>
                 <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "32px", "height": "32px"}} src={starImage}></img></th>
                 {/**
                  * truncate the strings up to a length of 20 
@@ -182,7 +228,7 @@ export default function ViewEmails() {
                  */}
                 <th>{email.sender.length > 20 ? email.sender.substring(0, 17) + "..." : email.sender}</th>
                 <th>{email.subject.length > 20 ? email.subject.substring(0, 17) + "..." : email.subject}</th>
-                <th>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
+                <th onClick={() => {viewEmail(email)}}>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
                 <th>{time}</th>
             </tr>
         )
@@ -255,7 +301,7 @@ export default function ViewEmails() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(inputFields)
-            })
+            });
 
             /* 
             * if the returned email object's
@@ -342,7 +388,6 @@ export default function ViewEmails() {
                 emails.map((email) => {
                     return <Email email={email}/>
                 })}
-
             </table>
         )
     }
@@ -413,12 +458,9 @@ export default function ViewEmails() {
             <form onSubmit={filterEmails}>
                 <label>Filter emails by</label>
                 <select id='sortBy'>
-                    <option value="starred">Starred only</option>
-                    <option value="unstarred">Unstarred only</option>
                     <option value="allReceived">All emails received</option>
                     <option value="allSent">All emails sent</option>
-                    <option value="newest">Newest first</option>
-                    <option value="oldest">Oldest first</option>
+                    <option value="starred">Starred only</option>
                 </select>
                 <button>Filter</button>
             </form>
@@ -434,27 +476,70 @@ export default function ViewEmails() {
 
         let filterEmailForm = {
             "recipient": user["email"],
-            "sortBy": e.target.sortBy.value
+            "sortBy": e.target.sortBy.value,
         };
-                
-        let response = await fetch("http://localhost:8080/filteremails", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(filterEmailForm)
-        });
+            
+        if (e.target.sortBy.value == "allReceived") {
+            getEmails(user);
+        } else {
+            let response = await fetch("http://localhost:8080/filteremails", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(filterEmailForm)
+            });
+    
+            response.json().then((data) => {
+                setEmails(data);
+                //disable View Next Emails button when the next set of emails is less than 25
+                if (data.length < offsetChange) {
+                    document.getElementById("viewNextButton").disabled = true;
+                } else {
+                    document.getElementById("viewNextButton").disabled = false;
+                }
+            });
+        }
 
-        response.json().then((data) => {
-            setEmails(data);
-        });
     }
+
+    //calls the getEmails function for the next 25 recent emails
+    function increaseOffset() {
+        setOffset((offset) => offset + offsetChange);
+        setPage((page) => page + 1);
+
+        //disable the button until the getEmails function finishes
+        document.getElementById("viewNextButton").disabled = true;
+    }
+
+    //calls the getEmails function for the previous 25 recent emails
+    function decreaseOffset() {
+        if (offset >= 2) {
+            setOffset((offset) => offset - offsetChange);
+        }
+        if (page >= 2) {
+            setPage((page) => page - 1);
+        }
+
+        //disable the button until the getEmails function finishes
+        document.getElementById("viewPrevButton").disabled = true;
+    }
+
 
     return (
         <div>
-            <div id='restOfPage'>
+            <div id="restOfPage">
                 {/* returns a welcome message only if the user object is not null */}
-                {user!==null ? <div style={flexStyleObj}> <h3>Welcome back, {user["email"]}!</h3><button onClick={logOut}>Log Out</button></div> : <h3></h3>}
+                {
+                    user!==null ? 
+                    <div style={flexStyleObj}> 
+                        <h3>Welcome back, {user["email"]}!</h3>
+                        <a href="/settings"><button className="btn btn-primary">Account Settings</button></a>
+                        <button className="btn btn-primary" onClick={logOut}>Log Out</button>
+                    </div> : <h3></h3>
+                }
+
+                <p style={textAlignObj}>Click on the content of an email to fully view it in a separate menu</p>
                 <hr></hr>
                 <div className="flex-container" style={flexStyleObj}>            
                     <div>
@@ -469,8 +554,16 @@ export default function ViewEmails() {
                 </div>
                 
                 <hr></hr>
-                <h3 style={{'textAlign': 'center'}}>Your Emails</h3>
+                <h3 style={textAlignObj}>Your Emails</h3>
                 <EmailTable/>
+                
+                <div className="flex-container" style={flexStyleObj}>
+                    <button id="viewPrevButton" onClick={decreaseOffset}>View Previous Emails</button>
+                    <button id="viewNextButton" onClick={increaseOffset}>View Next Emails</button>
+                </div>
+                <br></br>
+                <p style={textAlignObj}>Page {page}</p>
+
                 <hr></hr>
 
                 <div className="flex-container" style={flexStyleObj} id='recipientList'></div>
@@ -513,14 +606,18 @@ export default function ViewEmails() {
                     <br></br>
                     <textarea readOnly id='currentContent' style={textAreaStyleObj}></textarea>
                 </div>
-                {/**
-                 * only render the file attatchments if the fileAttatchments array contains
-                 * strings of 1 or more file names
-                 */
-                 //array of filenames split by the | character as a delimiter
-                 }
                 <div>Download file attatchments:</div>
-                {fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {return (<div><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></div>);}) : null}
+                {
+                    /**
+                     * only render the file attatchments if the fileAttatchments array contains
+                     * strings of 1 or more file names
+                     * 
+                     * array of filenames split by the | character as a delimiter
+                     */
+                    fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {
+                        return (<div><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></div>);
+                    }) : null
+                }
             </div>
 
             <br></br>
