@@ -355,7 +355,7 @@ export default function ViewEmails() {
                 }
             }
         } catch {
-            alert("No file was selected");
+            console.log("No file was selected");
         }
         alert("File(s) uploaded successfully!");
         window.location.reload();

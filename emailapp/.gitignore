@@ -4,7 +4,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 src/main/resources/application.properties
-src/main/java/com/example/emailapp/Database.java
 src/main/java/com/example/emailapp/Security.java
 
 ### STS ###
