@@ -17,7 +17,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Base64;
 
-//custom class with a function for Base64 encoding
+//custom class with functions for encrypting and decrypting data
 import com.example.emailapp.Security;
 
 import com.example.emailapp.Models.Email;

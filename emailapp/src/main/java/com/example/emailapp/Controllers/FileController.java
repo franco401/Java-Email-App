@@ -10,13 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-
 //used to allow different request origins
 import org.springframework.web.bind.annotation.CrossOrigin;
 
