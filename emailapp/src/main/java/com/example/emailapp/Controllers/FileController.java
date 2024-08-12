@@ -2,7 +2,6 @@ package com.example.emailapp.Controllers;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 //used to read url parameters such as /greeting?name="Adam"
 import org.springframework.web.bind.annotation.RequestParam;

@@ -17,10 +17,11 @@ A full stack, email application using Java in the backend with Spring Boot and J
 * Java 22
 
 # Spring Boot Dependencies Used
-* Lombok
-* Spring Web
-* PostgreSQL Driver
-* Apache Commons Codec 1.17
+* spring-boot-starter-web
+* lombok
+* spring-boot-starter-test
+* commons-codec (Version 1.17)
+* sqlite-jdbc (Version 3.46.0.1)
 
 # React Dependencies Used
 ``` npm install react ```
