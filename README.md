@@ -53,3 +53,4 @@ docker run -d -p 127.0.0.1:8080:8080 spring-app
 ```
 docker run -d -p 127.0.0.1:5173:5173 react-app
 ```
+8. The project should now be accessible at: http://127.0.0.1:5173/
