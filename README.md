@@ -26,7 +26,7 @@ A full stack, email application using Java in the backend with Spring Boot and J
 # React Dependencies Used
 * react (Version 18.2.0)
 * react-router-dom (Version 6.23.1)
-* axios (1.7.3)
+* axios (1.7.4)
 * bootstrap (Version 5.3.3)
 
 ## Installation Guide (Windows)
