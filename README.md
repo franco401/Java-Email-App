@@ -24,10 +24,32 @@ A full stack, email application using Java in the backend with Spring Boot and J
 * sqlite-jdbc (Version 3.46.0.1)
 
 # React Dependencies Used
-``` npm install react ```
+* react (Version 18.2.0)
+* react-router-dom (Version 6.23.1)
+* axios (1.7.3)
+* bootstrap (Version 5.3.3)
 
-``` npm install react-router-dom ```
+## Installation Guide (Windows)
 
-``` npm install axios ```
-
-``` npm install bootstrap@5.3.3  ```
+1. Download Docker Desktop: https://docs.docker.com/desktop/install/windows-install/
+2. Download the source code
+3. Go to the "emailapp" folder, open command prompt and enter:
+```
+docker build -t spring-app .
+```
+4. Go to the "frontend" folder, open command prompt and enter:
+```
+docker build -t react-app .
+```
+5. (Optional) Check to see if the images were made by opening command prompt and entering:
+```
+docker images
+```
+6. To start the Spring Boot server, open command prompt and enter:
+```
+docker run -d -p 127.0.0.1:8080:8080 spring-app
+```
+7. To start the React app, open command prompt and enter:
+```
+docker run -d -p 127.0.0.1:5173:5173 react-app
+```
