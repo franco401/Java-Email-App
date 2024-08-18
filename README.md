@@ -32,7 +32,7 @@ A full stack, email application using Java in the backend with Spring Boot and J
 ## Installation Guide (Windows)
 
 1. Download Docker Desktop: https://docs.docker.com/desktop/install/windows-install/
-2. Download the source code
+2. Download the source code and have Docker Desktop open
 3. Go to the "emailapp" folder, open command prompt and enter:
 ```
 docker build -t spring-app .
