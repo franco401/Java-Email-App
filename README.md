@@ -1,4 +1,4 @@
-# Java-Email-WebApp
+# Java Email Web App
 A full stack, email web application using Java in the backend with Spring Boot and JavaScript in the frontend with React.
 
 # Features
