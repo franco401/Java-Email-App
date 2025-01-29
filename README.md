@@ -11,6 +11,7 @@ A full stack, email application using Java in the backend with Spring Boot and J
 * Users can attatch multiple files (with a total limit of 8MB) when sending an email
 * Users can download the attatched files from emails they received
 * The content of sent emails are encrypted when uploaded to the backend and decrypted when viewed in the frontend
+* Users can reply to each other's emails
 
 # Versions Used
 * Spring Boot 3.3.0

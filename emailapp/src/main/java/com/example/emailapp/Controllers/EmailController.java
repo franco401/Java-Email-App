@@ -2,6 +2,7 @@ package com.example.emailapp.Controllers;
 
 import com.example.emailapp.Database;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -23,7 +24,9 @@ import com.example.emailapp.Security;
 import com.example.emailapp.Models.Email;
 import com.example.emailapp.Models.User;
 import com.example.emailapp.Models.GetEmailsForm;
+import com.example.emailapp.Models.GetRepliesForm;
 import com.example.emailapp.Models.EmailForm;
+import com.example.emailapp.Models.ReplyForm;
 import com.example.emailapp.Models.FilterEmailForm;
 import com.example.emailapp.Models.StarEmailForm;
 
@@ -37,7 +40,7 @@ public class EmailController {
 
         if (conn != null) {
             //get up to the 25 most recent emails sorted by newest to oldest
-            String query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments from emails where recipient = ? order by sent desc limit 25 offset ?";
+            String query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments, email_id_to_reply from emails where recipient = ? and email_id_to_reply is null order by sent desc limit 25 offset ?";
             ArrayList<Email> emails = new ArrayList<Email>();
 
             //try-with-resources automatically closes the ps variable
@@ -48,14 +51,72 @@ public class EmailController {
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     //create an Email object for each row returned from the database query and add it to the array list
-                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"));
+                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"), rs.getString("email_id_to_reply"));
                     emails.add(email);
                 }
                 //close connection and result set once finished with db query
                 conn.close();
                 rs.close();
             } catch (SQLException e) {
-                System.out.println("Query error line 57: " + e);
+                System.out.println("Query error line 60: " + e);
+            }
+            return emails;
+        }
+        //return an empty Email ArrayList if conn is null
+        return new ArrayList<Email>();
+    }
+
+    //remove this soon
+    @GetMapping("/allemails")
+    public ArrayList<Email> allEmails() {
+        Connection conn = Database.connect();
+
+        ArrayList<Email> emails = new ArrayList<Email>();
+
+        if (conn != null) {
+            String query = "select * from emails";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    //create an Email object for each row returned from the database query and add it to the array list
+                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"), rs.getString("email_id_to_reply"));
+                    emails.add(email);
+                }
+                //close connection and result set once finished with db query
+                conn.close();
+                rs.close();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            return emails;
+        }
+        return new ArrayList<Email>();
+    }
+
+    @PostMapping("/repliesreceived")
+    public ArrayList<Email> repliesReceived(@RequestBody GetRepliesForm getRepliesForm) {
+        Connection conn = Database.connect();
+
+        if (conn != null) {
+            String query = "select id, sender, recipient, subject, content, sent, starred, file_attatchments, email_id_to_reply from emails where email_id_to_reply = ?";
+            ArrayList<Email> emails = new ArrayList<Email>();
+
+            //try-with-resources automatically closes the ps variable
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, getRepliesForm.email_id_to_reply);
+                //ps.setString(2, getRepliesForm.email_id_to_reply);
+                
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    //create an Email object for each row returned from the database query and add it to the array list
+                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"), rs.getString("email_id_to_reply"));
+                    emails.add(email);
+                }
+                //close connection and result set once finished with db query
+                conn.close();
+                rs.close();
+            } catch (SQLException e) {
+                System.out.println("Query error line 119: " + e);
             }
             return emails;
         }
@@ -92,7 +153,7 @@ public class EmailController {
                 rs.close();
             } catch (SQLException e) {
                 //return null if a user doesn't exist
-                System.out.println("Query error line 94: " + e);
+                System.out.println("Query error line 97: " + e);
                 return null;
             }
 
@@ -111,7 +172,7 @@ public class EmailController {
         Connection conn = Database.connect();
         
         if (conn != null) {
-            String query = "insert into emails values (?, ?, ?, ?, ?, ?, ?, ?)";
+            String query = "insert into emails values (?, ?, ?, ?, ?, ?, ?, ?, null)";
 
             String id = "";
 
@@ -152,7 +213,7 @@ public class EmailController {
                         ps.addBatch();
 
                         //append query string for each recipient found
-                        query += ",(?, ?, ?, ?, ?, ?, ?, ?)";
+                        query += ",(?, ?, ?, ?, ?, ?, ?, ?, null)";
 
                         recipientsFound++;
                         existingUserIndex = i;
@@ -165,18 +226,68 @@ public class EmailController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty Email object if the email couldn't be inserted
-                System.out.println("Query error line 167: " + e);
-                return new Email("", "", "", "", null, 0, false, "");
+                System.out.println("Query error line 171: " + e);
+                return new Email("", "", "", "", null, 0, false, "", "");
             }
             if (recipientsFound > 0) {
                 //return an Email object if inserted successfully with one of the existing recipients
-                return new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false, "");
+                return new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false, "", "");
             }
             //return an empty Email object if none of the recipients exist
-            return new Email("", "", "", "", null, 0, false, "");
+            return new Email("", "", "", "", null, 0, false, "", "");
         }
         //return an empty Email object if conn is null
-        return new Email("", "", "", "", null, 0, false, "");
+        return new Email("", "", "", "", null, 0, false, "", "");
+    }
+
+    @PostMapping("/sendreply")
+    public Email sendReply(@RequestBody ReplyForm replyForm) {
+        Connection conn = Database.connect();
+        
+        if (conn != null) {
+            String query = "insert into emails values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            String id = "";
+
+            //try-with-resources automatically closes the ps variable
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                if (getUser(replyForm.recipient) != null) {
+                    //create Base64 id using current time and the list of the recipients for the email being sent
+                    id = Base64.getEncoder().encodeToString((replyForm.recipient + System.currentTimeMillis()).getBytes());
+
+                    //set query parameters
+                    ps.setString(1, id);
+                    ps.setString(2, replyForm.sender);
+                    ps.setString(3, replyForm.recipient);
+                    ps.setString(4, replyForm.subject);
+                    ps.setString(5, Security.encrypt(replyForm.content));
+                    ps.setLong(6, System.currentTimeMillis());
+                    ps.setBoolean(7, false);
+                    ps.setString(8, replyForm.fileAttatchments);
+                    ps.setString(9, replyForm.email_id_to_reply);
+                    
+                    //add this current insert query to a batch for bulk insert later below
+                    ps.addBatch();
+
+                    //append query string for each recipient found
+                    query += ",(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                }
+
+                //insert all email(s) to database at once
+                ps.executeBatch();
+
+                //close connection and result set once finished with db query
+                conn.close();
+            } catch (SQLException e) {
+                //return an empty Email object if the email couldn't be inserted
+                System.out.println("Query error line 171: " + e);
+                return new Email("", "", "", "", null, 0, false, "", "");
+            }
+            //return an empty Email object if none of the recipients exist
+            return new Email("", "", "", "", null, 0, false, "", "");
+        }
+        //return an empty Email object if conn is null
+        return new Email("", "", "", "", null, 0, false, "", "");
     }
 
     @PostMapping("/staremail")
@@ -199,13 +310,13 @@ public class EmailController {
                 conn.close();
             } catch (SQLException e) {
                 //return null if the email couldn't be starred
-                System.out.println("Query error line 201: " + e);
+                System.out.println("Query error line 205: " + e);
                 return null;
             }
-            return new Email("", "", "", "", "", 0, starEmailForm.starred, "");
+            return new Email("", "", "", "", "", 0, starEmailForm.starred, "", "");
         }
         //return an empty Email object if conn is null
-        return new Email("", "", "", "", null, 0, false, "");
+        return new Email("", "", "", "", null, 0, false, "", "");
     }
 
     @PostMapping("/filteremails")
@@ -236,7 +347,7 @@ public class EmailController {
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     //create an email object for each row returned from the database query and add it to the array list
-                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"));
+                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"), "");
                     emails.add(email);
                 }
                 //close connection and result set once finished with db query
@@ -244,7 +355,7 @@ public class EmailController {
                 rs.close();
             } catch (SQLException e) {
                 //return null if the query couldn't execute
-                System.out.println("Query error line 246: " + e);
+                System.out.println("Query error line 250: " + e);
                 return null;
             }
             return emails;

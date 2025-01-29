@@ -163,7 +163,7 @@ public class UserController {
         return new User("", "", "");
     }
 
-    @PostMapping("updatepassword")
+    @PostMapping("/updatepassword")
     public User updatePassword(@RequestBody UserForm userForm) {
         //connect to database and read post request data mapped into userForm
         Connection conn = Database.connect();

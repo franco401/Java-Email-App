@@ -7,10 +7,10 @@ import java.sql.*;
 
 @SpringBootApplication
 public class EmailappApplication {
-
 	public static void main(String[] args) {
+		
 		SpringApplication.run(EmailappApplication.class, args);
-
+		
 		String createUsersTable = "create table if not exists users ("
 									+ "id text primary key not null,"
 									+ " email text not null,"
@@ -24,7 +24,10 @@ public class EmailappApplication {
 									+ " content text not null,"
 									+ " sent int8 not null,"
 									+ " starred bool,"
-									+ " file_attatchments text not null);";
+									+ " file_attatchments text not null,"
+									+ " email_id_to_reply text,"
+									+ " foreign key (sender) references users(email) on delete cascade,"
+									+ " foreign key (recipient) references users(email) on delete cascade);";
 
 		/*
 		* tries connecting to sqlite database and will create it
@@ -39,7 +42,7 @@ public class EmailappApplication {
 				statement.execute(createEmailsTable);
 			}
 		} catch (SQLException e) {
-			System.out.println("Connection error line 42: " + e);
+			System.out.println("Connection error line 45: " + e);
 		}
 	}
 

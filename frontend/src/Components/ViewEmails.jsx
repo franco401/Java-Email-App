@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import 'bootstrap/dist/css/bootstrap.css';
+import { use } from "react";
 
 export default function ViewEmails() {
     document.title = "Your Emails";
@@ -25,7 +26,7 @@ export default function ViewEmails() {
         "width": '50%',
         "padding": '10px',
         "bottom": '10%',
-        "right": '40%'
+        "right": '40%',
     };
 
     //css style object for textarea elements
@@ -58,6 +59,9 @@ export default function ViewEmails() {
 
     //used to display what 'page' the user is in when going through many emails
     let [page, setPage] = useState(1);
+
+    //set value of recipient field to send reply to this user
+    let [replyRecipeint, setReplyRecipient] = useState("");
 
     useEffect(() => {
         /**
@@ -184,6 +188,9 @@ export default function ViewEmails() {
 
     let restOfPage = document.getElementById("restOfPage");
     
+    //list of replies of a given email id
+    let [replies, setReplies] = useState([]);
+    
     //shows a container showing the currently selected email contents
     function viewEmail(email) {
         //hide the rest of page to better focus on the currently viewing email
@@ -192,22 +199,63 @@ export default function ViewEmails() {
         //set previously hidden container with current viewing email visible 
         document.getElementById("viewEmailContainer").style = "display: flex; flex-direction: column; align-items: center;";
 
+        //do the same for the replies
+        document.getElementById("viewRepliesContainer").style = "display: flex; flex-direction: column; align-items: center;";
+
         //set values based on current email
-        document.getElementById("currentSender").value = email.sender;
-        document.getElementById("currentSubject").value = email.subject;
-        document.getElementById("currentContent").value = email.content;
-        document.getElementById("currentDate").value = calculateTime(email.sent);
+        document.getElementById("currentSender").innerText = "From " + email.sender;
+        document.getElementById("currentSubject").innerText = "Subject: " + email.subject;
+        document.getElementById("currentContent").innerText = email.content;
+        document.getElementById("currentDate").innerText = calculateTime(email.sent);
+        document.getElementById("currentRecipient").innerText = "to " + email.recipient;
 
         //array of filenames split by the | character as a delimiter
         setFileAttatchments(email.fileAttatchments.split("|"));
+
+        /**
+         * if replying to own sent email, sent reply recipient to
+         * the recipient of the originally sent email
+         */
+        if (email.sender === user["email"]) {
+            setReplyRecipient(email.recipient);
+        } else {
+            setReplyRecipient(email.sender);
+        }
+
+        //add id of email to reply to and see replies for
+        localStorage.setItem("email_id_to_reply", email.id);
+
+        //get list of replies of this email
+        getReplies();
+    }
+
+    async function getReplies() {
+        let getEmailFormData = {
+            "recipient": user["email"],
+            "email_id_to_reply": localStorage.getItem("email_id_to_reply")
+        };
+
+        let response = await fetch("http://localhost:8080/repliesreceived", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(getEmailFormData)
+        });
+
+        response.json().then((data) => {
+            console.log("replies = ", data)
+            setReplies(data);
+        });
     }
 
     function closeEmail() {
         //make the rest of the page visible again
         document.getElementById("restOfPage").style = restOfPage.style;
 
-        //hide the email container
+        //hide the email and reply container
         document.getElementById("viewEmailContainer").style = "display: none";
+        document.getElementById("viewRepliesContainer").style = "display: none";
     }
 
     function Email({email}) {
@@ -221,15 +269,16 @@ export default function ViewEmails() {
         }
 
         return (
-            <tr>
+            <tr onClick={() => {viewEmail(email)}}>
                 <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "32px", "height": "32px"}} src={starImage}></img></th>
                 {/**
                  * truncate the strings up to a length of 20 
                  * to keep the table viewable
                  */}
                 <th>{email.sender.length > 20 ? email.sender.substring(0, 17) + "..." : email.sender}</th>
+                <th>{email.recipient.length > 20 ? email.recipient.substring(0, 17) + "..." : email.recipient}</th>
                 <th>{email.subject.length > 20 ? email.subject.substring(0, 17) + "..." : email.subject}</th>
-                <th onClick={() => {viewEmail(email)}}>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
+                <th>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
                 <th>{time}</th>
             </tr>
         )
@@ -323,6 +372,63 @@ export default function ViewEmails() {
         }
     }
 
+    function openReplyForm() {
+        //display reply and file upload forms
+        document.getElementById("replyForm").style = "display: flex; justifyContent: center; gap: 5%";
+    }
+
+    async function sendReply(e) {
+        e.preventDefault();
+
+        let subject = e.target.replySubject.value;
+        let content = e.target.replyContent.value;
+        
+        let inputFields = {
+            "recipient": replyRecipeint,
+            "subject": subject, 
+            "content": content, 
+            "email_id_to_reply": localStorage.getItem("email_id_to_reply")
+        };
+
+        //add sender and file attatchments to POST request
+        inputFields["sender"] = user["email"];
+        inputFields["fileAttatchments"] = getFileAttatchmentString();
+
+        //console.log(inputFields);
+        let response = await fetch("http://localhost:8080/sendreply", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(inputFields)
+        });
+
+        //reload page once reply is sent
+        window.location.reload();
+
+        //console.log("response = ", response)
+
+        /* 
+        * if the returned email object's
+        * recipient isn't empty, upload any files
+        * attatched to the email
+        */
+
+        /*
+        response.json().then((data) => {
+            if (data["recipient"] === '') {
+                alert("This recipient doesn't exist");
+            } else {
+                alert("Email sent successfully!");
+                //upload files if there are any
+                if (inputFields["fileAttatchments"] !== "") {
+                    uploadFiles();
+                }
+            }
+        });
+        */
+    }
+
     function EmailForm() {
         return (
             <form onSubmit={sendEmail}>
@@ -333,6 +439,20 @@ export default function ViewEmails() {
                 <textarea required style={textAreaStyleObj} id='content' placeholder="Content"></textarea>
                 <br></br>
                 <button>Send Email</button>
+            </form>
+        )
+    }
+
+    function ReplyForm() {
+        return (
+            <form onSubmit={sendReply}>
+                <input value={replyRecipeint} title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" id='replyRecipient' readOnly></input>
+                <br></br>
+                <input required id='replySubject' placeholder="Subject"></input>
+                <br></br>
+                <textarea required style={textAreaStyleObj} id='replyContent' placeholder="Content"></textarea>
+                <br></br>
+                <button>Send Reply</button>
             </form>
         )
     }
@@ -376,6 +496,7 @@ export default function ViewEmails() {
                 <tr>
                     <th></th>
                     <th>Sender</th>
+                    <th>Recipient</th>
                     <th>Subject</th>
                     <th>Content</th>
                     <th>Sent</th>
@@ -526,6 +647,32 @@ export default function ViewEmails() {
         document.getElementById("viewPrevButton").disabled = true;
     }
 
+    function Reply({reply}) {
+        return (
+            <div>
+                <div className="flex-container" style={flexStyleObj}>
+                    <p>From {reply.sender}</p>
+                    <p>{calculateTime(reply.sent)}</p>
+                    <p>to {reply.recipient}</p>
+                </div>
+                <p style={{'textAlign': 'center'}}>{reply.content}</p>
+                <br></br>
+                <div>Download file attatchments:</div>
+                {
+                    /**
+                     * only render the file attatchments if the fileAttatchments array contains
+                     * strings of 1 or more file names
+                     * 
+                     * array of filenames split by the | character as a delimiter
+                     */
+                    fileAttatchments[0] != '""' ? fileAttatchments.map((filename) => {
+                        return (<div><a href={`http://localhost:8080/files/${filename}`}>{filename}</a></div>);
+                    }) : null
+                }
+                <hr></hr>
+            </div>
+        )
+    }
 
     return (
         <div>
@@ -556,6 +703,7 @@ export default function ViewEmails() {
                 
                 <hr></hr>
                 <h3 style={textAlignObj}>Your Emails</h3>
+                
                 <EmailTable/>
                 
                 <div className="flex-container" style={flexStyleObj}>
@@ -587,26 +735,13 @@ export default function ViewEmails() {
             
             <div id='viewEmailContainer' style={viewEmailObj}>
                 <button onClick={closeEmail}>Close</button>
-                <div>
-                    <label>Sender</label>
-                    <br></br>
-                    <input readOnly id='currentSender'></input>
+                <h3 id='currentSubject'></h3>
+                <div className="flex-container" style={flexStyleObj}>
+                    <p id='currentSender'></p>
+                    <p id='currentDate'></p>
+                    <p id='currentRecipient'></p>
                 </div>
-                <div>
-                    <label>Subject</label>
-                    <br></br>
-                    <input readOnly id='currentSubject'></input>
-                </div>
-                <div>
-                    <label>Sent</label>
-                    <br></br>
-                    <input readOnly id='currentDate'></input>
-                </div>
-                <div>
-                    <label>Content</label>
-                    <br></br>
-                    <textarea readOnly id='currentContent' style={textAreaStyleObj}></textarea>
-                </div>
+                <p readOnly id='currentContent'></p>
                 <div>Download file attatchments:</div>
                 {
                     /**
@@ -621,9 +756,28 @@ export default function ViewEmails() {
                 }
             </div>
 
-            <br></br>
-            <br></br>
-            <br></br>
+            <div id="viewRepliesContainer" style={viewEmailObj}>
+                <hr></hr>
+                {
+                    replies.map((reply) => {
+                        return (
+                            <Reply style={viewEmailObj} reply={reply}/>
+                        )
+                    })
+                }
+                <button onClick={openReplyForm}>Reply</button>
+
+                <div id="replyForm" className="flex-container" style={{"display": "none"}}>
+                    <div>
+                        <h5>Send a reply</h5>
+                        <ReplyForm/>
+                    </div>
+                    <div>
+                        <h5>Add file attatchments to reply</h5>
+                        <FileUploadForm/>
+                    </div>
+                </div>
+            </div>
 
         </div>
     )
