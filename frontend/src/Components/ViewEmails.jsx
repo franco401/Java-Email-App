@@ -651,6 +651,7 @@ export default function ViewEmails() {
         return (
             <div>
                 <div className="flex-container" style={flexStyleObj}>
+                    <h3>Subject: {reply.subject}</h3>
                     <p>From {reply.sender}</p>
                     <p>{calculateTime(reply.sent)}</p>
                     <p>to {reply.recipient}</p>
@@ -735,8 +736,8 @@ export default function ViewEmails() {
             
             <div id='viewEmailContainer' style={viewEmailObj}>
                 <button onClick={closeEmail}>Close</button>
-                <h3 id='currentSubject'></h3>
                 <div className="flex-container" style={flexStyleObj}>
+                    <h3 id='currentSubject'></h3>
                     <p id='currentSender'></p>
                     <p id='currentDate'></p>
                     <p id='currentRecipient'></p>
@@ -755,9 +756,9 @@ export default function ViewEmails() {
                     }) : null
                 }
             </div>
+            <hr></hr>
 
             <div id="viewRepliesContainer" style={viewEmailObj}>
-                <hr></hr>
                 {
                     replies.map((reply) => {
                         return (
