@@ -30,6 +30,8 @@ import com.example.emailapp.Models.ReplyForm;
 import com.example.emailapp.Models.FilterEmailForm;
 import com.example.emailapp.Models.StarEmailForm;
 
+import com.example.emailapp.EmailappApplication;
+
 @CrossOrigin(origins = "http://127.0.0.1:5173/")
 
 @RestController
@@ -58,7 +60,7 @@ public class EmailController {
                 conn.close();
                 rs.close();
             } catch (SQLException e) {
-                System.out.println("Query error line 60: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
             }
             return emails;
         }
@@ -116,7 +118,7 @@ public class EmailController {
                 conn.close();
                 rs.close();
             } catch (SQLException e) {
-                System.out.println("Query error line 119: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
             }
             return emails;
         }
@@ -153,7 +155,7 @@ public class EmailController {
                 rs.close();
             } catch (SQLException e) {
                 //return null if a user doesn't exist
-                System.out.println("Query error line 97: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return null;
             }
 
@@ -226,7 +228,7 @@ public class EmailController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty Email object if the email couldn't be inserted
-                System.out.println("Query error line 171: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new Email("", "", "", "", null, 0, false, "", "");
             }
             if (recipientsFound > 0) {
@@ -280,7 +282,7 @@ public class EmailController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty Email object if the email couldn't be inserted
-                System.out.println("Query error line 171: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new Email("", "", "", "", null, 0, false, "", "");
             }
             //return an empty Email object if none of the recipients exist
@@ -310,7 +312,7 @@ public class EmailController {
                 conn.close();
             } catch (SQLException e) {
                 //return null if the email couldn't be starred
-                System.out.println("Query error line 205: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return null;
             }
             return new Email("", "", "", "", "", 0, starEmailForm.starred, "", "");
@@ -355,7 +357,7 @@ public class EmailController {
                 rs.close();
             } catch (SQLException e) {
                 //return null if the query couldn't execute
-                System.out.println("Query error line 250: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return null;
             }
             return emails;

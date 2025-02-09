@@ -1,7 +1,7 @@
 package com.example.emailapp.Controllers;
 
 import com.example.emailapp.Database;
-
+import com.example.emailapp.EmailappApplication;
 import com.example.emailapp.Models.User;
 import com.example.emailapp.Models.UserForm;
 
@@ -54,7 +54,7 @@ public class UserController {
                 conn.close();
                 rs.close();
             } catch (SQLException e) {
-                System.out.println("Query error line 57: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new ArrayList<User>();
             }
             return users;
@@ -86,7 +86,7 @@ public class UserController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty User object if an error occurred
-                System.out.println("Query error line 87: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new User("", "", "");
                 
             }
@@ -123,7 +123,7 @@ public class UserController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty User object if an error occurred
-                System.out.println("Query error line 124: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new User("", "", "");
             }
             /*
@@ -154,7 +154,7 @@ public class UserController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty User object if an error occurred
-                System.out.println("Query error line 155: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new User("", "", "");
             }
             return new User("", email, "");
@@ -182,7 +182,7 @@ public class UserController {
                 conn.close();
             } catch (SQLException e) {
                 //return an empty User object if an error occurred
-                System.out.println("Query error line 183: " + e);
+                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return new User("", "", ""); 
             }
             return new User("", userForm.email, "");
