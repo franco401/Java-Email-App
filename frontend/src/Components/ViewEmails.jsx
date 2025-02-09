@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import 'bootstrap/dist/css/bootstrap.css';
-import { use } from "react";
 
 export default function ViewEmails() {
     document.title = "Your Emails";
@@ -63,7 +62,13 @@ export default function ViewEmails() {
     //set value of recipient field to send reply to this user
     let [replyRecipeint, setReplyRecipient] = useState("");
 
+    //styles for displayed messages
+    let errorDisplayStyle = "display: grid; color: red; text-align: center";
+    let goodMessageStyle = "display: grid; color: green; text-align: center";
+
+
     useEffect(() => {
+        configDisplayMessage("", "display: none");
         /**
          * read the logged in user's email address
          * saved in localStorage and use it to retrieve
@@ -84,38 +89,47 @@ export default function ViewEmails() {
             "recipient": user["email"],
             "offset": offset
         };
-        let data = await fetch("http://localhost:8080/emailsreceived", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(getEmailFormData)
-        }).then(response => response.json());
 
-        setEmails(data);
-        
-        /**
-         * create a copy of the emails array in localStorage
-         * so emailsCopy can store it without being a reference
-         * to it (so emailsCopy doesn't affect the original emails array)
-         * so then it can be used for email searching with regex further below
-         */
-        localStorage.setItem("emails", JSON.stringify(data));
-        setEmailsCopy(JSON.parse(localStorage.getItem("emails")));
-        localStorage.removeItem("emails");
+        try {
+            let data = await fetch("http://localhost:8080/emailsreceived", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(getEmailFormData)
+            }).then(response => response.json());
 
-        //disable View Previous Emails button when on the first set of emails
-        if (page == 1) {
-            document.getElementById("viewPrevButton").disabled = true;
-        } else {
-            document.getElementById("viewPrevButton").disabled = false;
-        }
+            //remove current error message
+            configDisplayMessage("", "display: none");
+            
+            setEmails(data);
+            
+            /**
+             * create a copy of the emails array in localStorage
+             * so emailsCopy can store it without being a reference
+             * to it (so emailsCopy doesn't affect the original emails array)
+             * so then it can be used for email searching with regex further below
+             */
+            localStorage.setItem("emails", JSON.stringify(data));
+            setEmailsCopy(JSON.parse(localStorage.getItem("emails")));
+            localStorage.removeItem("emails");
 
-        //disable View Next Emails button when the next set of emails is less than 25
-        if (data.length < offsetChange) {
-            document.getElementById("viewNextButton").disabled = true;
-        } else {
-            document.getElementById("viewNextButton").disabled = false;
+            //disable View Previous Emails button when on the first set of emails
+            if (page == 1) {
+                document.getElementById("viewPrevButton").disabled = true;
+            } else {
+                document.getElementById("viewPrevButton").disabled = false;
+            }
+
+            //disable View Next Emails button when the next set of emails is less than 25
+            if (data.length < offsetChange) {
+                document.getElementById("viewNextButton").disabled = true;
+            } else {
+                document.getElementById("viewNextButton").disabled = false;
+            }
+        } catch {
+            //display when user can't connect to the server
+            configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
         }
     }
     
@@ -235,18 +249,25 @@ export default function ViewEmails() {
             "email_id_to_reply": localStorage.getItem("email_id_to_reply")
         };
 
-        let response = await fetch("http://localhost:8080/repliesreceived", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(getEmailFormData)
-        });
+        try {
+            let response = await fetch("http://localhost:8080/repliesreceived", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(getEmailFormData)
+            });
 
-        response.json().then((data) => {
-            console.log("replies = ", data)
-            setReplies(data);
-        });
+            response.json().then((data) => {
+                //remove current error message
+                configDisplayMessageForReplies("", "display: none");
+
+                setReplies(data);
+            });
+        } catch {
+            //display when user can't connect to the server
+            configDisplayMessageForReplies("Couldn't connect to the server", errorDisplayStyle);
+        }
     }
 
     function closeEmail() {
@@ -295,10 +316,10 @@ export default function ViewEmails() {
             if (recipient.length > 0) {
                 setRecipients((recipients) => [...recipients, recipient]);
             } else {
-                alert("Please enter at least 1 character");
+                configDisplayMessage("Please enter at least 1 character", errorDisplayStyle);
             }
         } else {
-            alert("You can't add yourself as a recipient");
+            configDisplayMessage("You can't add yourself as a recipient", errorDisplayStyle);
         }
         if (recipients.length === 0) {
             //add this only once
@@ -343,32 +364,37 @@ export default function ViewEmails() {
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
         if (recipients.length === 0) {
-            alert("Please click the add recipient button at least once first");
+            configDisplayMessage("Please click the add recipient button at least once first", errorDisplayStyle);
         } else {
-            let response = await fetch("http://localhost:8080/sendemail", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(inputFields)
-            });
+            try {
+                let response = await fetch("http://localhost:8080/sendemail", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(inputFields)
+                });
 
-            /* 
-            * if the returned email object's
-            * recipient isn't empty, upload any files
-            * attatched to the email
-            */
-            response.json().then((data) => {
-                if (data["recipient"] === '') {
-                    alert("This recipient doesn't exist");
-                } else {
-                    alert("Email sent successfully!");
-                    //upload files if there are any
-                    if (inputFields["fileAttatchments"] !== "") {
-                        uploadFiles();
+                /* 
+                * if the returned email object's
+                * recipient isn't empty, upload any files
+                * attatched to the email
+                */
+                response.json().then((data) => {
+                    if (data["recipient"] === '') {
+                        configDisplayMessage("This recipient doesn't exist", errorDisplayStyle);
+                    } else {
+                        configDisplayMessage("Email sent successfully!", goodMessageStyle);
+                        //upload files if there are any
+                        if (inputFields["fileAttatchments"] !== "") {
+                            uploadFiles();
+                        }
                     }
-                }
-            });
+                });
+            } catch {
+                //display when user can't connect to the server
+                configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+            }
         }
     }
 
@@ -394,39 +420,40 @@ export default function ViewEmails() {
         inputFields["sender"] = user["email"];
         inputFields["fileAttatchments"] = getFileAttatchmentString();
 
-        //console.log(inputFields);
-        let response = await fetch("http://localhost:8080/sendreply", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(inputFields)
-        });
+        try {
+            let response = await fetch("http://localhost:8080/sendreply", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(inputFields)
+            });
 
-        //reload page once reply is sent
-        window.location.reload();
+            /* 
+            * if the returned email object's
+            * recipient isn't empty, upload any files
+            * attatched to the email
+            */
 
-        //console.log("response = ", response)
-
-        /* 
-        * if the returned email object's
-        * recipient isn't empty, upload any files
-        * attatched to the email
-        */
-
-        /*
-        response.json().then((data) => {
-            if (data["recipient"] === '') {
-                alert("This recipient doesn't exist");
-            } else {
-                alert("Email sent successfully!");
-                //upload files if there are any
-                if (inputFields["fileAttatchments"] !== "") {
-                    uploadFiles();
+            response.json().then((data) => {
+                if (data["recipient"] === '') {
+                    configDisplayMessageForReplies("This recipient doesn't exist", errorMessageStyle);
+                } else {
+                    configDisplayMessageForReplies("Reply sent successfully!", goodMessageStyle);
+                    
+                    //upload files if there are any
+                    if (inputFields["fileAttatchments"] !== "") {
+                        uploadFiles();
+                    }
                 }
-            }
-        });
-        */
+            });
+
+            //reload page once reply is sent
+            window.location.reload();
+        } catch {
+            //display when user can't connect to the server
+            configDisplayMessageForReplies("Couldn't connect to the server", errorDisplayStyle);
+        }
     }
 
     function EmailForm() {
@@ -468,16 +495,16 @@ export default function ViewEmails() {
             for (let i = 0; i < files.length; i++) {
                 //check if the current file is larger than 8MB
                 if (files[i].size > 8000000) {
-                    alert(`Cannot upload this file because it is larger than 8MB:\n ${files[i].name}`);
+                    configDisplayMessage(`Cannot upload this file because it is larger than 8MB:\n ${files[i].name}`, errorDisplayStyle);
                 } else {
                     formData.append("file", files[i], files[i].name);
                     await axios.post("http://localhost:8080/uploadfiles", formData);
                 }
             }
         } catch {
-            console.log("No file was selected");
+            configDisplayMessage("No file was selected", errorDisplayStyle);
         }
-        alert("File(s) uploaded successfully!");
+        configDisplayMessage("File(s) uploaded successfully!", goodMessageStyle);
         window.location.reload();
     }
 
@@ -604,23 +631,31 @@ export default function ViewEmails() {
         if (e.target.sortBy.value == "allReceived") {
             getEmails(user);
         } else {
-            let response = await fetch("http://localhost:8080/filteremails", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(filterEmailForm)
-            });
-    
-            response.json().then((data) => {
-                setEmails(data);
-                //disable View Next Emails button when the next set of emails is less than 25
-                if (data.length < offsetChange) {
-                    document.getElementById("viewNextButton").disabled = true;
-                } else {
-                    document.getElementById("viewNextButton").disabled = false;
-                }
-            });
+            try {
+                let response = await fetch("http://localhost:8080/filteremails", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(filterEmailForm)
+                });
+        
+                response.json().then((data) => {
+                    //remove current error message
+                    configDisplayMessage("", "display: none");
+                    
+                    setEmails(data);
+                    //disable View Next Emails button when the next set of emails is less than 25
+                    if (data.length < offsetChange) {
+                        document.getElementById("viewNextButton").disabled = true;
+                    } else {
+                        document.getElementById("viewNextButton").disabled = false;
+                    }
+                });
+            } catch {
+                //display when user can't connect to the server
+                configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+            }
         }
 
     }
@@ -675,6 +710,16 @@ export default function ViewEmails() {
         )
     }
 
+    function configDisplayMessage(message, style) {
+        document.getElementById("displayMessage").innerText = message;
+        document.getElementById("displayMessage").style = style;
+    }
+
+    function configDisplayMessageForReplies(message, style) {
+        document.getElementById("displayMessageForReplies").innerText = message;
+        document.getElementById("displayMessageForReplies").style = style;
+    }
+
     return (
         <div>
             <div id="restOfPage">
@@ -704,6 +749,7 @@ export default function ViewEmails() {
                 
                 <hr></hr>
                 <h3 style={textAlignObj}>Your Emails</h3>
+                <h3 id="displayMessage"></h3>
                 
                 <EmailTable/>
                 
@@ -736,6 +782,7 @@ export default function ViewEmails() {
             
             <div id='viewEmailContainer' style={viewEmailObj}>
                 <button onClick={closeEmail}>Close</button>
+                <h3 id="displayMessageForReplies"></h3>
                 <div className="flex-container" style={flexStyleObj}>
                     <h3 id='currentSubject'></h3>
                     <p id='currentSender'></p>
