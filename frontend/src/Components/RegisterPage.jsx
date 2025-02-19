@@ -40,6 +40,8 @@ export default function RegisterPage() {
             "password": password
         };
 
+        let registerStatusCode = 0;
+
         try {
             let response = await fetch("http://localhost:8080/register", {
                 method: "POST",
@@ -47,20 +49,35 @@ export default function RegisterPage() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(inputFields)
+            }).then(function(response) {
+                registerStatusCode = response.status;
+                return response.json();
             });
     
-            response.json().then((data) => {
-                console.log(data);
-                if (data['email'] === '') {
-                    configDisplayMessage("This email is already taken", errorDisplayStyle);
-                } else {
-                    configDisplayMessage("Successfully registered account", goodMessageStyle);
-                    window.location.href = "/login";
-                }
-            });
+            if (response['email'].length > 0) {
+                configDisplayMessage("Successfully registered account", goodMessageStyle);
+                window.location.href = "/login";
+            }
+            
         } catch {
-            //display when user can't connect to the server
-            configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+            switch (registerStatusCode) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 403:
+                    //display when user is blocked from making more requests
+                    configDisplayMessage("You are currently blocked from making any requests", errorDisplayStyle);
+                    break;
+                case 429:
+                    //display when user has done too many requests
+                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessage("A server error has occurred. It could be that this email address is already taken.", errorDisplayStyle);
+                    break;
+            }
         }
     }
 

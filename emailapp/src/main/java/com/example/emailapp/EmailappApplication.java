@@ -7,6 +7,12 @@ import java.sql.*;
 
 @SpringBootApplication
 public class EmailappApplication {
+
+	//returns the line number that calls this function
+	public static int getLineNumber() {
+		return Thread.currentThread().getStackTrace()[2].getLineNumber();
+	}
+
 	public static void main(String[] args) {
 		
 		SpringApplication.run(EmailappApplication.class, args);
@@ -42,7 +48,7 @@ public class EmailappApplication {
 				statement.execute(createEmailsTable);
 			}
 		} catch (SQLException e) {
-			System.out.println("Connection error line 45: " + e);
+			System.out.println("Connection error at line " + getLineNumber() + " :" + e);
 		}
 	}
 

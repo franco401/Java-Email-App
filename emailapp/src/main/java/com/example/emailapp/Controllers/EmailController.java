@@ -2,13 +2,13 @@ package com.example.emailapp.Controllers;
 
 import com.example.emailapp.Database;
 
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 //used to allow different request origins
 import org.springframework.web.bind.annotation.CrossOrigin;
 
@@ -17,12 +17,15 @@ import java.sql.*;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 //custom class with functions for encrypting and decrypting data
 import com.example.emailapp.Security;
 
 import com.example.emailapp.Models.Email;
 import com.example.emailapp.Models.User;
+
 import com.example.emailapp.Models.GetEmailsForm;
 import com.example.emailapp.Models.GetRepliesForm;
 import com.example.emailapp.Models.EmailForm;
@@ -36,8 +39,93 @@ import com.example.emailapp.EmailappApplication;
 
 @RestController
 public class EmailController {
+    //stores amount of requests for each user
+    HashMap<String, AtomicInteger> requestsPerUser = new HashMap<String, AtomicInteger>();
+    
+    //stores the timestamp of when each user is allowed to make a request after being blocked
+    HashMap<String, Long> blockedUsers = new HashMap<String, Long>();
+    
+    /*
+     * the amount of requests for a user, as an AtomicInteger object,
+     * great for atomically incrementing to avoid incorrect values
+     * as each request will increment this value in its own thread
+     */
+    AtomicInteger requests = new AtomicInteger(0);
+    
+    //request limit for all users, small for testing purposes 
+    int requestLimit = 5;
+
+    //amount of minutes users have to wait until they get unblocked
+    int minutes = 1;
+
+    //checks if a user has reached the request limit
+    public boolean requestLimitReached(String user) {
+        //add new user if not already added
+        requestsPerUser.putIfAbsent(user, new AtomicInteger(0));
+        
+        //increment amount of requests for a user
+        requests = requestsPerUser.get(user);
+        requests.incrementAndGet();
+
+        return requests.get() > requestLimit;
+    }
+
+    //remove user from blockedUsers hashmap and set user's request count to 1
+    public void unblockUser(String user) {
+        //remove user from blockedUser hashmap
+        blockedUsers.remove(user);
+
+        //set user's request count to 1
+        requestsPerUser.remove(user);
+        requestsPerUser.putIfAbsent(user, new AtomicInteger(1));
+    }
+
+    //call this only AFTER a user reaches the request limit
+    public void blockUser(String user) {
+        //make a future timestamp 1 minute from now that a blocked user has to wait until to make further requests
+        long waitTime = System.currentTimeMillis() + (1000 * 10 * 1);
+
+        //add new user if not already added
+        blockedUsers.putIfAbsent(user, waitTime);
+    }
+
+    //handles rate limiting logic to prevent users from making too many requests
+    public int rateLimit(String user) {
+        //the blocked user's timestamp of when they can do a request again, can be null if it's not in blockedUsers 
+        Object userTimeStamp = blockedUsers.get(user);
+
+        //basic rate limiting logic below, checks if user has reached the request limit and other cases below
+        if (requestLimitReached(user)) {
+            //check if the user is in the blockedUser hashmap, if not block them
+            if (userTimeStamp != null) {
+                //check the current time of this request, if false then the user is still blocked
+                if (System.currentTimeMillis() > (long)userTimeStamp) {
+                    //unblock this user, then proceed with connecting to the database and do the request further below
+                    unblockUser(user);
+                } else {
+                    //user is still blocked
+                    return HttpStatus.FORBIDDEN.value();
+                }
+            } else {
+                blockUser(user);
+                return HttpStatus.TOO_MANY_REQUESTS.value();
+            }
+        }
+        return 200;
+    }
+
     @PostMapping("/emailsreceived")
-    public ArrayList<Email> emailsReceived(@RequestBody GetEmailsForm getEmailsForm) {
+    public ResponseEntity<Object> emailsReceived(@RequestBody GetEmailsForm getEmailsForm) {        
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(getEmailsForm.recipient);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+
         Connection conn = Database.connect();
 
         if (conn != null) {
@@ -62,41 +150,25 @@ public class EmailController {
             } catch (SQLException e) {
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
             }
-            return emails;
+            //return emails from query
+            return new ResponseEntity<>(emails, HttpStatus.OK);
         }
-        //return an empty Email ArrayList if conn is null
-        return new ArrayList<Email>();
-    }
-
-    //remove this soon
-    @GetMapping("/allemails")
-    public ArrayList<Email> allEmails() {
-        Connection conn = Database.connect();
-
-        ArrayList<Email> emails = new ArrayList<Email>();
-
-        if (conn != null) {
-            String query = "select * from emails";
-            try (PreparedStatement ps = conn.prepareStatement(query)) {
-                ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    //create an Email object for each row returned from the database query and add it to the array list
-                    Email email = new Email(rs.getString("id"), rs.getString("sender"), rs.getString("recipient"), rs.getString("subject"), Security.decrypt(rs.getString("content")), rs.getLong("sent"), rs.getBoolean("starred"), rs.getString("file_attatchments"), rs.getString("email_id_to_reply"));
-                    emails.add(email);
-                }
-                //close connection and result set once finished with db query
-                conn.close();
-                rs.close();
-            } catch (Exception e) {
-                System.out.println(e);
-            }
-            return emails;
-        }
-        return new ArrayList<Email>();
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/repliesreceived")
-    public ArrayList<Email> repliesReceived(@RequestBody GetRepliesForm getRepliesForm) {
+    public ResponseEntity<Object> repliesReceived(@RequestBody GetRepliesForm getRepliesForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(getRepliesForm.recipient);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         Connection conn = Database.connect();
 
         if (conn != null) {
@@ -106,7 +178,6 @@ public class EmailController {
             //try-with-resources automatically closes the ps variable
             try (PreparedStatement ps = conn.prepareStatement(query)) {
                 ps.setString(1, getRepliesForm.email_id_to_reply);
-                //ps.setString(2, getRepliesForm.email_id_to_reply);
                 
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
@@ -120,13 +191,14 @@ public class EmailController {
             } catch (SQLException e) {
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
             }
-            return emails;
+            //return emails from query
+            return new ResponseEntity<>(emails, HttpStatus.OK);
         }
-        //return an empty Email ArrayList if conn is null
-        return new ArrayList<Email>();
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    //will be used by sendEmail to see if a user exists
+    //remove this soon, will be used by sendEmail to see if a user exists
     public User getUser(String recipient) {
         Connection conn = Database.connect();
         
@@ -170,7 +242,17 @@ public class EmailController {
     }
     
     @PostMapping("/sendemail")
-    public Email sendEmail(@RequestBody EmailForm emailForm) {
+    public ResponseEntity<Object> sendEmail(@RequestBody EmailForm emailForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(emailForm.sender);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         Connection conn = Database.connect();
         
         if (conn != null) {
@@ -227,23 +309,33 @@ public class EmailController {
                 //close connection and result set once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return an empty Email object if the email couldn't be inserted
+                //return a 500 status code if the email couldn't be inserted
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new Email("", "", "", "", null, 0, false, "", "");
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
             if (recipientsFound > 0) {
                 //return an Email object if inserted successfully with one of the existing recipients
-                return new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false, "", "");
+                return new ResponseEntity<>(new Email("", "", emailForm.sender, emailForm.recipients[existingUserIndex], "", System.currentTimeMillis(), false, "", ""), HttpStatus.OK);
             }
-            //return an empty Email object if none of the recipients exist
-            return new Email("", "", "", "", null, 0, false, "", "");
+            //return a 204 status code if none of the recipients doesn't exist
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        //return an empty Email object if conn is null
-        return new Email("", "", "", "", null, 0, false, "", "");
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/sendreply")
-    public Email sendReply(@RequestBody ReplyForm replyForm) {
+    public ResponseEntity<Object> sendReply(@RequestBody ReplyForm replyForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(replyForm.sender);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         Connection conn = Database.connect();
         
         if (conn != null) {
@@ -283,17 +375,27 @@ public class EmailController {
             } catch (SQLException e) {
                 //return an empty Email object if the email couldn't be inserted
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new Email("", "", "", "", null, 0, false, "", "");
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            //return an empty Email object if none of the recipients exist
-            return new Email("", "", "", "", null, 0, false, "", "");
+            //return a 204 status code if none of the recipients doesn't exist
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        //return an empty Email object if conn is null
-        return new Email("", "", "", "", null, 0, false, "", "");
+        //return a 500 status code if the server couldn't connect to the server
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/staremail")
-    public Email starEmail(@RequestBody StarEmailForm starEmailForm) {
+    public ResponseEntity<Object> starEmail(@RequestBody StarEmailForm starEmailForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(starEmailForm.user);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         Connection conn = Database.connect();
         
         if (conn != null) {
@@ -311,18 +413,29 @@ public class EmailController {
                 //close connection and result set once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return null if the email couldn't be starred
+                //return a 500 status code if the email couldn't be inserted
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return null;
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            return new Email("", "", "", "", "", 0, starEmailForm.starred, "", "");
+            //return email object's starred state
+            return new ResponseEntity<>(new Email("", "", "", "", "", 0, starEmailForm.starred, "", ""), HttpStatus.OK);
         }
-        //return an empty Email object if conn is null
-        return new Email("", "", "", "", null, 0, false, "", "");
+        //return a 500 status code if the server couldn't connect to the server
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/filteremails")
-    public ArrayList<Email> filterEmails(@RequestBody FilterEmailForm filterEmailForm) {
+    public ResponseEntity<Object> filterEmails(@RequestBody FilterEmailForm filterEmailForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(filterEmailForm.recipient);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         Connection conn = Database.connect();
         
         if (conn != null) {
@@ -360,9 +473,9 @@ public class EmailController {
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
                 return null;
             }
-            return emails;
+            return new ResponseEntity<>(emails, HttpStatus.OK);
         }
-        //return an empty Email ArrayList if conn is null
-        return new ArrayList<Email>();
+        //return a 500 status code if the server couldn't connect to the server
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

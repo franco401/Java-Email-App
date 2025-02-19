@@ -14,57 +14,110 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 //used to create api endpoints for controller
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 //used to allow different request origins
 import org.springframework.web.bind.annotation.CrossOrigin;
-
 //used for password hashing
 import org.apache.commons.codec.digest.DigestUtils;
 
 //used to execute db queries
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @CrossOrigin(origins = "http://127.0.0.1:5173/")
 @RestController
 public class UserController {
-    @GetMapping("/users")
-    public ArrayList<User> getUsers() {
-        Connection conn = Database.connect();
+    //stores amount of requests for each user
+    HashMap<String, AtomicInteger> requestsPerUser = new HashMap<String, AtomicInteger>();
+    
+    //stores the timestamp of when each user is allowed to make a request after being blocked
+    HashMap<String, Long> blockedUsers = new HashMap<String, Long>();
+    
+    /*
+     * the amount of requests for a user, as an AtomicInteger object,
+     * great for atomically incrementing to avoid incorrect values
+     * as each request will increment this value in its own thread
+     */
+    AtomicInteger requests = new AtomicInteger(0);
+    
+    //request limit for all users 
+    int requestLimit = 5;
 
-        if (conn != null) {
-            String query = "select id, email, password from users";
-            ArrayList<User> users = new ArrayList<User>();
+    //amount of minutes users have to wait until they get unblocked
+    int minutes = 1;
 
-            //try-with-resources automatically closes the ps variable
-            try (PreparedStatement ps = conn.prepareStatement(query)) {
-                ResultSet rs = ps.executeQuery();
+    //checks if a user has reached the request limit
+    public boolean requestLimitReached(String user) {
+        //add new user if not already added
+        requestsPerUser.putIfAbsent(user, new AtomicInteger(0));
+        
+        //increment amount of requests for a user
+        requests = requestsPerUser.get(user);
+        requests.incrementAndGet();
 
-                //read returned data from query in result set
-                while (rs.next()) {
-                    /*
-                    * create a user object for each row returned from 
-                    * the database query and add it to the array list
-                    */
-                    User user = new User(rs.getString("id"), rs.getString("email"), rs.getString("password"));
-                    users.add(user);
+        return requests.get() > requestLimit;
+    }
+
+    //remove user from blockedUsers hashmap and set user's request count to 1
+    public void unblockUser(String user) {
+        //remove user from blockedUser hashmap
+        blockedUsers.remove(user);
+
+        //set user's request count to 1
+        requestsPerUser.remove(user);
+        requestsPerUser.putIfAbsent(user, new AtomicInteger(1));
+    }
+
+    //call this only AFTER a user reaches the request limit
+    public void blockUser(String user) {
+        //make a future timestamp 1 minute from now that a blocked user has to wait until to make further requests
+        long waitTime = System.currentTimeMillis() + (1000 * 60 * 1);
+
+        //add new user if not already added
+        blockedUsers.putIfAbsent(user, waitTime);
+    }
+
+    //handles rate limiting logic to prevent users from making too many requests
+    public int rateLimit(String user) {
+        //the blocked user's timestamp of when they can do a request again, can be null if it's not in blockedUsers 
+        Object userTimeStamp = blockedUsers.get(user);
+
+        //basic rate limiting logic below, checks if user has reached the request limit and other cases below
+        if (requestLimitReached(user)) {
+            //check if the user is in the blockedUser hashmap, if not block them
+            if (userTimeStamp != null) {
+                //check the current time of this request, if false then the user is still blocked
+                if (System.currentTimeMillis() > (long)userTimeStamp) {
+                    //unblock this user, then proceed with connecting to the database and do the request further below
+                    unblockUser(user);
+                } else {
+                    //user is still blocked
+                    return HttpStatus.FORBIDDEN.value();
                 }
-                //close connection and result set once finished with db query
-                conn.close();
-                rs.close();
-            } catch (SQLException e) {
-                System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new ArrayList<User>();
+            } else {
+                blockUser(user);
+                return HttpStatus.TOO_MANY_REQUESTS.value();
             }
-            return users;
         }
-        //return an empty User ArrayList if conn is null
-        return new ArrayList<User>();
+        return 200;
     }
 
     @PostMapping("/register")
-    public User register(@RequestBody UserForm userForm) {
+    public ResponseEntity<Object> register(@RequestBody UserForm userForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(userForm.email);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         //connect to database and read post request data mapped into userForm
         Connection conn = Database.connect();
     
@@ -85,19 +138,29 @@ public class UserController {
                 //close connection once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return an empty User object if an error occurred
+                //return a 500 status code if an error occurred
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new User("", "", "");
-                
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);                
             }
-            return new User("", userForm.email, "");
+            //return user's email if registration was successful
+            return new ResponseEntity<>(new User("", userForm.email, ""), HttpStatus.OK);
         }
-        //return an empty User object if conn is null
-        return new User("", "", "");
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/login")
-    public User login(@RequestBody UserForm userForm) {
+    public ResponseEntity<Object> login(@RequestBody UserForm userForm) {
+        //get status code from rateLimit check and handle it below
+        int statusCode = rateLimit(userForm.email);
+
+        switch (statusCode) {
+            case 403:
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);    
+            case 429:
+                return new ResponseEntity<>(HttpStatus.TOO_MANY_REQUESTS);
+        }
+        
         //connect to database and read post request data mapped into userForm
         Connection conn = Database.connect();
         
@@ -122,23 +185,25 @@ public class UserController {
                 //close connection once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return an empty User object if an error occurred
+                //return a 500 status code if an error occurred
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new User("", "", "");
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);                
             }
-            /*
-            * create a User object for the row in
-            * the database that matches the entered
-            * username and password
-            */
-            return new User("", email, "");
+            
+            //return user's email if logging in was successful (non-empty sql result)
+            if (email.length() > 0) {
+                return new ResponseEntity<>(new User("", email, ""), HttpStatus.OK);
+            } else {
+                //return 204 if the sql result is an email
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
         }
-        //return an empty User object if conn is null
-        return new User("", "", "");
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @GetMapping("/deleteaccount")
-    public User deleteAccount(@RequestParam(value = "email") String email) {
+    public ResponseEntity<Object> deleteAccount(@RequestParam(value = "email") String email) {
         Connection conn = Database.connect();
         
         if (conn != null) {
@@ -153,18 +218,18 @@ public class UserController {
                 //close connection once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return an empty User object if an error occurred
+                //return a 500 status code if an error occurred
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new User("", "", "");
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);                
             }
-            return new User("", email, "");
+            return new ResponseEntity<>(new User("", email, ""), HttpStatus.OK);
         }
-        //return an empty User object if conn is null
-        return new User("", "", "");
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/updatepassword")
-    public User updatePassword(@RequestBody UserForm userForm) {
+    public ResponseEntity<Object> updatePassword(@RequestBody UserForm userForm) {
         //connect to database and read post request data mapped into userForm
         Connection conn = Database.connect();
         
@@ -181,13 +246,14 @@ public class UserController {
                 //close connection once finished with db query
                 conn.close();
             } catch (SQLException e) {
-                //return an empty User object if an error occurred
+                //return a 500 status code if an error occurred
                 System.out.println("Query error at line " + EmailappApplication.getLineNumber() + " :" + e);
-                return new User("", "", ""); 
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); 
             }
-            return new User("", userForm.email, "");
+            //return the user's email if the password update was successful
+            return new ResponseEntity<>(new User("", userForm.email, ""), HttpStatus.OK);
         }
-        //return an empty User object if conn is null
-        return new User("", "", "");
+        //return a 500 status code if the server can't connect to the database
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

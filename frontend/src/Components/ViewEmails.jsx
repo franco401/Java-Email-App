@@ -90,6 +90,8 @@ export default function ViewEmails() {
             "offset": offset
         };
 
+        let statusCodeForEmails = 0;
+
         try {
             let data = await fetch("http://localhost:8080/emailsreceived", {
                 method: "POST",
@@ -97,11 +99,14 @@ export default function ViewEmails() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(getEmailFormData)
-            }).then(response => response.json());
+            }).then(function(response) {
+                statusCodeForEmails = response.status;
+                return response.json();
+            });
 
             //remove current error message
             configDisplayMessage("", "display: none");
-            
+
             setEmails(data);
             
             /**
@@ -128,8 +133,24 @@ export default function ViewEmails() {
                 document.getElementById("viewNextButton").disabled = false;
             }
         } catch {
-            //display when user can't connect to the server
-            configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+            switch (statusCodeForEmails) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 403:
+                    //display when user is blocked from making more requests
+                    configDisplayMessage("You are currently blocked from making any requests", errorDisplayStyle);
+                    break;
+                case 429:
+                    //display when user has done too many requests
+                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessage("A server error has occurred", errorDisplayStyle);
+                    break;
+            }
         }
     }
     
@@ -180,7 +201,8 @@ export default function ViewEmails() {
      */
     async function starEmail(emailID) {
         let starEmailForm = {
-            "emailID": emailID
+            "emailID": emailID,
+            "user": user["email"]
         };
 
         let starSource = document.getElementById(emailID).src;
@@ -191,13 +213,40 @@ export default function ViewEmails() {
             starEmailForm["starred"] = false;
             document.getElementById(emailID).src = "greyStar.jpg";
         }
-        await fetch("http://localhost:8080/staremail", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(starEmailForm)
-        });
+
+        let starStatusCode = 0;
+
+        try {
+            await fetch("http://localhost:8080/staremail", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(starEmailForm)
+            }).then(function(response) {
+                starStatusCode = response.status;
+                return response.json();
+            });
+        } catch {
+            switch (starStatusCode) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 403:
+                    //display when user is blocked from making more requests
+                    configDisplayMessage("You are currently blocked from making any requests", errorDisplayStyle);
+                    break;
+                case 429:
+                    //display when user has done too many requests
+                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessage("A server error has occurred", errorDisplayStyle);
+                    break;
+            }
+        }
     }
 
     let restOfPage = document.getElementById("restOfPage");
@@ -243,6 +292,8 @@ export default function ViewEmails() {
         getReplies();
     }
 
+    let statusCodeForReplies = 0;
+
     async function getReplies() {
         let getEmailFormData = {
             "recipient": user["email"],
@@ -256,17 +307,34 @@ export default function ViewEmails() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(getEmailFormData)
-            });
+            }).then(function(response) {
+                statusCodeForReplies = response.status;
 
-            response.json().then((data) => {
                 //remove current error message
                 configDisplayMessageForReplies("", "display: none");
 
                 setReplies(data);
+                return response.json();
             });
         } catch {
-            //display when user can't connect to the server
-            configDisplayMessageForReplies("Couldn't connect to the server", errorDisplayStyle);
+            switch (statusCodeForReplies) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 403:
+                    //display when user is blocked from making more requests
+                    configDisplayMessageForReplies("You are currently blocked from making any requests", errorDisplayStyle);
+                    break;
+                case 429:
+                    //display when user has done too many requests
+                    configDisplayMessageForReplies("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessageForReplies("A server error has occurred", errorDisplayStyle);
+                    break;
+            }
         }
     }
 
@@ -290,7 +358,7 @@ export default function ViewEmails() {
         }
 
         return (
-            <tr onClick={() => {viewEmail(email)}}>
+            <tr>
                 <th><img onClick={() => {starEmail(email.id)}} id={email.id} style={{"width": "32px", "height": "32px"}} src={starImage}></img></th>
                 {/**
                  * truncate the strings up to a length of 20 
@@ -300,7 +368,7 @@ export default function ViewEmails() {
                 <th>{email.recipient.length > 20 ? email.recipient.substring(0, 17) + "..." : email.recipient}</th>
                 <th>{email.subject.length > 20 ? email.subject.substring(0, 17) + "..." : email.subject}</th>
                 <th>{email.content.length > 20 ? email.content.substring(0, 17) + "..." : email.content}</th>
-                <th>{time}</th>
+                <th onClick={() => {viewEmail(email)}}>{time}</th>
             </tr>
         )
     }
@@ -393,7 +461,7 @@ export default function ViewEmails() {
                 });
             } catch {
                 //display when user can't connect to the server
-                configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+                configDisplayMessage("An error has occurred", errorDisplayStyle);
             }
         }
     }
@@ -452,7 +520,7 @@ export default function ViewEmails() {
             window.location.reload();
         } catch {
             //display when user can't connect to the server
-            configDisplayMessageForReplies("Couldn't connect to the server", errorDisplayStyle);
+            configDisplayMessageForReplies("An error has occurred", errorDisplayStyle);
         }
     }
 
@@ -654,7 +722,7 @@ export default function ViewEmails() {
                 });
             } catch {
                 //display when user can't connect to the server
-                configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+                configDisplayMessage("An error has occurred", errorDisplayStyle);
             }
         }
 

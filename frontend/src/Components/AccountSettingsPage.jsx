@@ -9,6 +9,8 @@ export default function AccountSettingsPage() {
     //load user object from localStorage
     let user = JSON.parse(localStorage.getItem("emailAddress"));
 
+    let errorDisplayStyle = "display: grid; color: red; text-align: center";
+
     useEffect(() => {
         /**
          * read the logged in user's email address
@@ -21,6 +23,11 @@ export default function AccountSettingsPage() {
             window.location.href = "/login";
         }
     }, []);
+
+    function configDisplayMessage(message, style) {
+        document.getElementById("displayMessage").innerText = message;
+        document.getElementById("displayMessage").style = style;
+    }
 
     function logOut() {
         localStorage.clear();
@@ -49,28 +56,47 @@ export default function AccountSettingsPage() {
             "password": password
         };
 
-        let response = await fetch("http://localhost:8080/updatepassword", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(inputFields)
-        })
-        response.json().then((data) => {
-            console.log(data);
-            if (data['email'] === '') {
+        let updateStatusCode = 0;
+
+        try {
+            let response = await fetch("http://localhost:8080/updatepassword", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(inputFields)
+            }).then(function(response) {
+                updateStatusCode = response.status;
+                return response.status;
+            });
+            
+            if (response['email'] === '') {
                 alert("Couldn't update your password.");
             } else {
                 alert("Successfully updated your password.");
                 logOut();
             }
-        });
+        } catch {
+            switch (updateStatusCode) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessage("A server error has occurred.", errorDisplayStyle);
+                    break;
+            }
+        }
     }
 
     return (
         <div>
             <h1 style={{'textAlign': 'center'}}>Account Settings</h1>
             <hr></hr>
+            <h3 id="displayMessage"></h3>
+            <br></br>
+            <br></br>
             <h3>Update Password</h3>
             <form onSubmit={updatePassword}>
                 <div className="mb-3">

@@ -1,10 +1,21 @@
 import 'bootstrap/dist/css/bootstrap.css';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
     document.title = "Login Page";
 
     let errorDisplayStyle = "display: grid; color: red; text-align: center";
     let goodMessageStyle = "display: grid; color: green; text-align: center";
+
+    //load user object from localStorage
+    let user = JSON.parse(localStorage.getItem("emailAddress"));
+
+    useEffect(() => {
+        //if the user is already logged in, take them back to the emails page
+        if (user !== null) {
+            window.location.href = "/emails";
+        }
+    }, []);
 
     function configDisplayMessage(message, style) {
         document.getElementById("displayMessage").innerText = message;
@@ -20,6 +31,8 @@ export default function LoginPage() {
             "password": password
         };
         
+        let loginStatusCode = 0;
+
         try {
             let response = await fetch("http://localhost:8080/login", {
                 method: "POST",
@@ -27,20 +40,38 @@ export default function LoginPage() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(inputFields)
-            })
-            
-            response.json().then((data) => {
-                if (data['email'] === '') {
-                    configDisplayMessage("The email and password entered were invalid", errorDisplayStyle);
-                } else {
-                    configDisplayMessage("Successfully logged in", goodMessageStyle);
-                    localStorage.setItem("emailAddress", JSON.stringify(data));
-                    window.location.href = "/emails";
-                }
+            }).then(function(response) {
+                loginStatusCode = response.status;
+                return response.json();
             });
+            
+            if (response['email'].length > 0) {
+                configDisplayMessage("Successfully logged in", goodMessageStyle);
+                localStorage.setItem("emailAddress", JSON.stringify(response));
+                window.location.href = "/emails";
+            }
         } catch {
-            //display when user can't connect to the server
-            configDisplayMessage("Couldn't connect to the server", errorDisplayStyle);
+            switch (loginStatusCode) {
+                case 0:
+                    //display when the connection refuses
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    break;
+                case 204:
+                    configDisplayMessage("The email and password entered were invalid", errorDisplayStyle);
+                    break;
+                case 403:
+                    //display when user is blocked from making more requests
+                    configDisplayMessage("You are currently blocked from making any requests", errorDisplayStyle);
+                    break;
+                case 429:
+                    //display when user has done too many requests
+                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    break;
+                case 500:
+                    //display when user can't connect to the server
+                    configDisplayMessage("A server error has occurred", errorDisplayStyle);
+                    break;
+            }
         }
     }
 
