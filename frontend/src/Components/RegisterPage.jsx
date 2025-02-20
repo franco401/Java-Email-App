@@ -8,6 +8,25 @@ export default function RegisterPage() {
     let decentMessageStyle = "display: grid; color: #d6e02b; text-align: center";
     let goodMessageStyle = "display: grid; color: green; text-align: center";
 
+    let center = {
+        'margin': '0',
+        'position': 'absolute',
+        'top': '40%',
+        'left': '50%',
+        'MsTransform': 'translate(-50%, -50%)',
+        'transform': 'translate(-50%, -50%)',
+        
+    };
+
+    let spanStyleObj = {
+        'margin': '0',
+        'position': 'absolute',
+        'top': '70%',
+        'left': '51%',
+        'MsTransform': 'translate(-50%, -50%)',
+        'transform': 'translate(-50%, -50%)'
+    };
+
     useEffect(() => {
         document.getElementById("registerButton").disabled = true;
     })
@@ -82,24 +101,24 @@ export default function RegisterPage() {
     }
 
     return (
-        <>
-            <h1 style={{'textAlign': 'center'}}>Register Page</h1>
-            <form onSubmit={register}>
-                <div className="mb-3">
-                    <label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
-                    <input title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" className="form-control" id="email" aria-describedby="emailHelp"></input>
+        <div>
+            <h1 style={{'textAlign': 'center', 'position': 'absolute', 'top': '8%', 'left': '37%'}}>Create Your Account</h1>
+            <form style={center} onSubmit={register}>
+                <div style={{'width': '400px'}} className="mb-3">
+                    <input placeholder='Email address' title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" className="form-control" id="email" aria-describedby="emailHelp"></input>
                 </div>
+                <br></br>
                 <div className="mb-3">
-                    <label htmlFor="exampleInputPassword1" className="form-label">Password</label>
-                    <input onInput={checkPasswordLength} required type="password" className="form-control" id="password"></input>
+                    <input placeholder='Password' onInput={checkPasswordLength} required type="password" className="form-control" id="password"></input>
                 </div>
+                <br></br>
                 <button id="registerButton" type="submit" className="btn btn-primary">Register</button>
             </form>
-            <span>Already have an account? Login <a href="/login">here</a></span>
+            <span style={spanStyleObj}>Already have an account? <a href="/login">Login</a></span>
 
             <br></br>
             <br></br>
             <h3 id="displayMessage"></h3>
-        </>
+        </div>
     )
 }

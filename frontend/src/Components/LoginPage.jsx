@@ -7,6 +7,26 @@ export default function LoginPage() {
     let errorDisplayStyle = "display: grid; color: red; text-align: center";
     let goodMessageStyle = "display: grid; color: green; text-align: center";
 
+
+    let center = {
+        'margin': '0',
+        'position': 'absolute',
+        'top': '40%',
+        'left': '40%',
+        'MsTransform': 'translate(-50%, -50%)',
+        'transform': 'translate(-50%, -50%)',
+        
+    };
+
+    let spanStyleObj = {
+        'margin': '0',
+        'position': 'absolute',
+        'top': '70%',
+        'left': '50%',
+        'MsTransform': 'translate(-50%, -50%)',
+        'transform': 'translate(-50%, -50%)'
+    };
+
     //load user object from localStorage
     let user = JSON.parse(localStorage.getItem("emailAddress"));
 
@@ -76,24 +96,27 @@ export default function LoginPage() {
     }
 
     return (
-        <>
-            <h1 style={{'textAlign': 'center'}}>Login Page</h1>
-            <form onSubmit={login}>
-                <div className="mb-3">
-                    <label htmlFor="exampleInputEmail1" className="form-label">Email address</label>
-                    <input title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" className="form-control" id="email" aria-describedby="emailHelp"></input>
+        <div>
+            <h1 style={{'textAlign': 'center', 'margin': 'auto', 'position': 'absolute', 'top': '8%', 'left': '37%'}}>Login to Your Account</h1>
+            <form style={center} onSubmit={login}>
+                <div style={{'width': '250%'}} className="mb-3">
+                    <input placeholder='Email address' title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" className="form-control" id="email" aria-describedby="emailHelp"></input>
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="exampleInputPassword1" className="form-label">Password</label>
-                    <input required type="password" className="form-control" id="password"></input>
+                <br></br>
+                <div style={{'width': '250%'}} className="mb-3">
+                    <input placeholder='Password' required type="password" className="form-control" id="password"></input>
                 </div>
-                <button type="submit" className="btn btn-primary">Login</button>
+                <br></br>
+                <button style={{'width': '100px'}} type="submit" className="btn btn-primary">Login</button>
             </form>
-            <span>Don't have an account? Create one <a href="/register">here</a></span>
+            
+            <div>
+                <span style={spanStyleObj}>Don't have an account? <a href="/register">Sign up</a></span>
+            </div>
             
             <br></br>
             <br></br>
             <h3 id="displayMessage"></h3>
-        </>
+        </div>
     )
 }
