@@ -12,6 +12,7 @@ A full stack, email web application using Java in the backend with Spring Boot a
 * Users can download the attatched files from emails they received
 * The content of sent emails are encrypted when uploaded to the backend and decrypted when viewed in the frontend
 * Users can reply to each other's emails
+* Added rate limiting to Spring Boot server using two hashmaps
 
 # Versions Used
 * Spring Boot 3.3.0
