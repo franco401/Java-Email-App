@@ -4,15 +4,16 @@ import { useEffect } from 'react';
 export default function LoginPage() {
     document.title = "Login Page";
 
-    let errorDisplayStyle = "display: grid; color: red; text-align: center";
-    let goodMessageStyle = "display: grid; color: green; text-align: center";
+    let errorDisplayStyle = "margin: 0; position: absolute; top: 80%; left: 30%; display: grid; color: blue; text-align: center";
+    let goodMessageStyle = "margin: 0; position: absolute; top: 80%; left: 30%; display: grid; color: green; text-align: center";
 
+    let connectionErrorStyle = "margin: 0; position: absolute; top: 80%; left: 20%; display: grid; color: red; text-align: center";
 
     let center = {
         'margin': '0',
         'position': 'absolute',
         'top': '40%',
-        'left': '40%',
+        'left': '50%',
         'MsTransform': 'translate(-50%, -50%)',
         'transform': 'translate(-50%, -50%)',
         
@@ -74,22 +75,22 @@ export default function LoginPage() {
             switch (loginStatusCode) {
                 case 0:
                     //display when the connection refuses
-                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", errorDisplayStyle);
+                    configDisplayMessage("Connection refused. You may not be connected to the internet or the server is down.", connectionErrorStyle);
                     break;
                 case 204:
-                    configDisplayMessage("The email and password entered were invalid", errorDisplayStyle);
+                    configDisplayMessage("The email and password entered were invalid", connectionErrorStyle);
                     break;
                 case 403:
                     //display when user is blocked from making more requests
-                    configDisplayMessage("You are currently blocked from making any requests", errorDisplayStyle);
+                    configDisplayMessage("You are currently blocked from making any requests", connectionErrorStyle);
                     break;
                 case 429:
                     //display when user has done too many requests
-                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", errorDisplayStyle);
+                    configDisplayMessage("You have made too many requests. You will be temporarily blocked from making requests for 1 minute.", connectionErrorStyle);
                     break;
                 case 500:
                     //display when user can't connect to the server
-                    configDisplayMessage("A server error has occurred", errorDisplayStyle);
+                    configDisplayMessage("A server error has occurred", connectionErrorStyle);
                     break;
             }
         }
@@ -97,13 +98,13 @@ export default function LoginPage() {
 
     return (
         <div>
-            <h1 style={{'textAlign': 'center', 'margin': 'auto', 'position': 'absolute', 'top': '8%', 'left': '37%'}}>Login to Your Account</h1>
+            <h1 style={{'textAlign': 'center', 'margin': 'auto', 'position': 'absolute', 'top': '8%', 'left': '39%'}}>Login to Your Account</h1>
             <form style={center} onSubmit={login}>
-                <div style={{'width': '250%'}} className="mb-3">
+                <div style={{'width': '400px'}} className="mb-3">
                     <input placeholder='Email address' title="username@mail.com" pattern="[A-Za-z0-9]+@mail.com" required type="email" className="form-control" id="email" aria-describedby="emailHelp"></input>
                 </div>
                 <br></br>
-                <div style={{'width': '250%'}} className="mb-3">
+                <div className="mb-3">
                     <input placeholder='Password' required type="password" className="form-control" id="password"></input>
                 </div>
                 <br></br>
