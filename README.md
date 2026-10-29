@@ -1,6 +1,3 @@
-# Java Email Web App
-A full stack, email web application using Java in the backend with Spring Boot and JavaScript in the frontend with React.
-
 ## Installation Guide (Windows)
 
 1. Download and install Docker Desktop if you don't have it installed: https://docs.docker.com/desktop/install/windows-install/
