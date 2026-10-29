@@ -28,7 +28,7 @@ git clone http://github.com/franco401/Java-Email-App.git
 4. Run uninstall.sh once you're done with the project
 
 
-# Access the application at http://127.0.0.1:5173/ once everything is setup (install.ps1 will open this link for you but it's here incase it's needed)
+# Access the application at http://127.0.0.1:5173/ once everything is setup (install.ps1 and install.sh will open this link for you but it's here incase it's needed)
 
 # Features
 * Users can make an account
